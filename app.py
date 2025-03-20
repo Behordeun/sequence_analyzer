@@ -6,10 +6,10 @@ import plotly.express as px
 import streamlit as st
 from Bio import Entrez, SeqIO
 from Bio.Align.Applications import ClustalOmegaCommandline
-from Bio.SeqUtils import GC
+from Bio.SeqUtils import gc_fraction 
 
 # Set Entrez email (Required by NCBI)
-Entrez.email = "your_email@example.com"
+Entrez.email = "abiodun.msulaiman@gmail.com"
 
 
 # Function to fetch sequence from GenBank
@@ -55,7 +55,7 @@ def analyze_sequences(sequences, is_rna):
     seq_data = []
     for record in sequences:
         seq_str = str(record.seq)
-        gc_content = GC(seq_str)
+        gc_content = gc_fraction(seq_str) * 100  # Convert fraction to percentage
         nucleotide_counts = {
             nuc: seq_str.count(nuc) for nuc in ("A", "U" if is_rna else "T", "G", "C")
         }
