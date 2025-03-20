@@ -6,7 +6,7 @@ import plotly.express as px
 from Bio import Entrez
 from Bio.SeqUtils import gc_fraction
 
-Entrez.email = "abc@example.com"
+Entrez.email = "abiodun.msulaiman@gmail.com"
 
 
 def fetch_sequence(accession):
