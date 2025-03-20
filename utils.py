@@ -1,8 +1,5 @@
-import time
-
 import pandas as pd
 import plotly.express as px
-import requests
 from Bio import Entrez
 from Bio.SeqUtils import gc_fraction
 
