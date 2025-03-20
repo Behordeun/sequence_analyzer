@@ -1,14 +1,16 @@
-import subprocess
-import tempfile
+import time
 
 import pandas as pd
 import plotly.express as px
+import requests
 from Bio import Entrez
 from Bio.SeqUtils import gc_fraction
 
+# Set Entrez email (required for NCBI API)
 Entrez.email = "abiodun.msulaiman@gmail.com"
 
 
+# Function to fetch sequences from GenBank
 def fetch_sequence(accession):
     try:
         handle = Entrez.efetch(
@@ -21,29 +23,12 @@ def fetch_sequence(accession):
         return f"Error fetching {accession}: {str(e)}"
 
 
+# Function to convert uploaded file to FASTA format
 def convert_to_fasta(uploaded_file):
     return uploaded_file.read().decode("utf-8")
 
 
-def align_sequences(sequences):
-    # Save sequences to a temporary FASTA file
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".fasta") as fasta_file:
-        fasta_file.write("\n".join(sequences).encode("utf-8"))
-        fasta_file_path = fasta_file.name
-
-    aligned_file_path = fasta_file_path.replace(".fasta", "_aligned.fasta")
-
-    try:
-        subprocess.run(
-            ["clustalo", "-i", fasta_file_path, "-o", aligned_file_path, "--auto"],
-            check=True,
-        )
-    except FileNotFoundError:
-        return "Error: Clustal Omega (clustalo) not found. Please ensure it is installed and in your system PATH."
-
-    return aligned_file_path
-
-
+# Function to analyze sequences
 def analyze_sequences(sequences, is_rna):
     seq_data = []
     for record in sequences:
@@ -52,6 +37,7 @@ def analyze_sequences(sequences, is_rna):
         nucleotide_counts = {
             nuc: seq_str.count(nuc) for nuc in ("A", "U" if is_rna else "T", "G", "C")
         }
+
         seq_data.append(
             {
                 "Sequence": record.id,
@@ -60,9 +46,11 @@ def analyze_sequences(sequences, is_rna):
                 **nucleotide_counts,
             }
         )
+
     return pd.DataFrame(seq_data)
 
 
+# Function to visualize analysis results using Plotly
 def visualize_results(df):
     fig = px.histogram(
         df,
