@@ -24,7 +24,9 @@ alignment_method = st.radio(
     "🧬 Select Alignment Method", ["Pairwise Alignment", "Multiple Sequence Alignment"]
 )
 
-sequences = []
+# Initialize session state for sequences
+if "sequences" not in st.session_state:
+    st.session_state["sequences"] = []
 
 # Option 1: Upload Multiple Sequence Files
 if option == "Upload Sequence File(s)":
@@ -36,17 +38,19 @@ if option == "Upload Sequence File(s)":
 
     if uploaded_files:
         total_sequences = 0
+        uploaded_sequences = []
         for uploaded_file in uploaded_files:
             fasta_content = convert_to_fasta(uploaded_file)
             fasta_records = list(SeqIO.parse(StringIO(fasta_content), "fasta"))
-            sequences.extend(fasta_records)
+            uploaded_sequences.extend(fasta_records)
             total_sequences += len(fasta_records)
 
+        st.session_state["sequences"] = uploaded_sequences  # Store in session state
         st.success(f"{total_sequences} sequences successfully uploaded!")
 
         # Display detected sequences
         st.subheader("📄 Identified Sequences:")
-        for seq in sequences:
+        for seq in st.session_state["sequences"]:
             st.write(f"✅ {seq.id} - {len(seq.seq)} bp")
 
 # Option 2: Enter Assertion Numbers
@@ -55,21 +59,21 @@ elif option == "Enter Assertion Numbers":
         "Enter Assertion Numbers (one per line)"
     ).splitlines()
 
-    if assertion_numbers:
-        if st.button("🔍 Fetch Sequences from GenBank"):
-            st.info("Fetching sequences from GenBank...")
-            genbank_sequences = [fetch_sequence(acc) for acc in assertion_numbers]
-            sequences.extend(
-                [SeqIO.read(StringIO(seq), "fasta") for seq in genbank_sequences if seq]
-            )
-            st.success(
-                f"{len(genbank_sequences)} sequences successfully retrieved from GenBank!"
-            )
+    if assertion_numbers and st.button("🔍 Fetch Sequences from GenBank"):
+        st.info("Fetching sequences from GenBank...")
+        genbank_sequences = [fetch_sequence(acc) for acc in assertion_numbers]
+        fetched_sequences = [
+            SeqIO.read(StringIO(seq), "fasta") for seq in genbank_sequences if seq
+        ]
+        st.session_state["sequences"] = fetched_sequences  # Store in session state
+        st.success(
+            f"{len(fetched_sequences)} sequences successfully retrieved from GenBank!"
+        )
 
-            # Display detected sequences
-            st.subheader("📄 Identified Sequences:")
-            for seq in sequences:
-                st.write(f"✅ {seq.id} - {len(seq.seq)} bp")
+        # Display detected sequences
+        st.subheader("📄 Identified Sequences:")
+        for seq in st.session_state["sequences"]:
+            st.write(f"✅ {seq.id} - {len(seq.seq)} bp")
 
 
 # Function for Pairwise Alignment using Biopython
@@ -118,12 +122,16 @@ def align_sequences_msa(sequences):
 
 
 # Align Sequence Button (Prevents automatic alignment)
-if sequences:
+if st.session_state["sequences"]:
     if st.button("🔄 Align Sequence"):
         if alignment_method == "Pairwise Alignment":
-            st.session_state["aligned_sequences"] = align_sequences_pairwise(sequences)
+            st.session_state["aligned_sequences"] = align_sequences_pairwise(
+                st.session_state["sequences"]
+            )
         else:
-            st.session_state["aligned_sequences"] = align_sequences_msa(sequences)
+            st.session_state["aligned_sequences"] = align_sequences_msa(
+                st.session_state["sequences"]
+            )
 
         st.success("✅ Sequence Alignment Completed!")
 
@@ -134,7 +142,7 @@ if "aligned_sequences" in st.session_state:
 
     # Generate a dynamic file name based on the number of sequences
     file_extension = file_format.lower()
-    num_sequences = len(sequences)
+    num_sequences = len(st.session_state["sequences"])
     download_file_name = f"aligned_sequences_{num_sequences}{file_extension}"
 
     # Convert alignment to the selected format
