@@ -1,0 +1,17 @@
+#[theme]
+#primaryColor = "#B7F0C7" # Lighter
+#backgroundColor = "#FFFFFF"  # White
+#secondaryBackgroundColor = "#122C39" # Dark
+#textColor = "black"
+#font = "sans serif"
+
+
+[theme]
+primaryColor = "#D0F0D1"
+backgroundColor = "#FFFFFF"  # white
+secondaryBackgroundColor = "#D0F0D1"
+textColor = "black"
+font = "sans serif"
+
+[server]
+port = 8501
