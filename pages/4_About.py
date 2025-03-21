@@ -48,3 +48,17 @@ This application was developed by:
 🔗 [GitHub Repository](https://github.com/Behordeun/sequence_analyzer)
 """
 )
+
+
+# Footer
+st.markdown("---")  # Divider
+st.markdown(
+    """
+Developed by [Behordeun](https://github.com/Behordeun) and [Bollergene](https://github.com/bollergene).  
+
+📅 Version: 1.0.0 | 🔗 [GitHub Repository](https://github.com/bioinformatics-project)
+
+Copyright | Behordeun 2025(c)
+""",
+    unsafe_allow_html=True,
+)
