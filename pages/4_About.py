@@ -54,8 +54,25 @@ This application was developed by:
 st.markdown("---")  # Divider
 st.markdown(
     """
-Developed by [Behordeun](https://github.com/Behordeun) and [Bollergene](https://github.com/bollergene).  
+    <p style="color: orange; text-align: center; font-size: 15px;">
+        Developed by 
+        <a href="https://github.com/Behordeun" target="_blank" style="color: blue; text-decoration: none;">Behordeun</a> 
+        and 
+        <a href="https://github.com/bollergene" target="_blank" style="color: blue; text-decoration: none;">Bollergene</a>.
+    </p>
+""",
+    unsafe_allow_html=True,
+)
 
+st.markdown(
+    """<p style="color:orange; text-align:center;font-size:15px;">
+📞+2348108316393
+""",
+    unsafe_allow_html=True,
+)
+
+st.markdown(
+    """<p style="color:orange; text-align:center;font-size:15px;">
 Copyright | Behordeun 2025(c)
 """,
     unsafe_allow_html=True,
