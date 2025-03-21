@@ -68,17 +68,20 @@ sequence_analyzer/
    git clone https://github.com/bioinformatics-project/sequence_analyzer.git
    cd sequence_analyzer
    ```
+
 2. **Set Up a Virtual Environment**
 
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
+
 3. **Install Dependencies**
 
    ```bash
    pip install -r requirements.txt
    ```
+
 4. **Run the Application**
 
    ```bash
