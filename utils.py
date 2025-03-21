@@ -1,5 +1,6 @@
 import pandas as pd
 import plotly.express as px
+import streamlit as st
 from Bio import Entrez
 from Bio.SeqUtils import gc_fraction
 
@@ -49,6 +50,7 @@ def analyze_sequences(sequences, is_rna):
 
 # Function to visualize analysis results using Plotly
 def visualize_results(df):
+    st.subheader("📊 GC Content Distribution")
     fig = px.histogram(
         df,
         x="GC_Content",
@@ -56,8 +58,9 @@ def visualize_results(df):
         title="GC Content Distribution",
         color_discrete_sequence=["blue"],
     )
-    fig.show()
+    st.plotly_chart(fig, use_container_width=True)
 
+    st.subheader("📊 Sequence Length Distribution")
     fig = px.histogram(
         df,
         x="Length",
@@ -65,8 +68,9 @@ def visualize_results(df):
         title="Sequence Length Distribution",
         color_discrete_sequence=["green"],
     )
-    fig.show()
+    st.plotly_chart(fig, use_container_width=True)
 
+    st.subheader("📊 GC Content vs Sequence Length")
     fig = px.scatter(
         df,
         x="Length",
@@ -76,4 +80,4 @@ def visualize_results(df):
         color_discrete_sequence=["red"],
     )
     fig.update_traces(textposition="top center")
-    fig.show()
+    st.plotly_chart(fig, use_container_width=True)
