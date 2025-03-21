@@ -1,9 +1,25 @@
 import streamlit as st
 
+from style_css import style
+
 st.set_page_config(page_title="Sequence Analyzer App", page_icon="🔬", layout="wide")
+
+
+style()
+
+
+hide_streamlit_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            </style>
+            """
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
 
 # Main Title
 st.title("🔬 Sequence Analyzer Application")
+
 
 st.markdown(
     """
@@ -40,8 +56,6 @@ st.markdown("---")  # Divider
 st.markdown(
     """
 Developed by [Behordeun](https://github.com/Behordeun) and [Bollergene](https://github.com/bollergene).  
-
-📅 Version: 1.0.0 | 🔗 [GitHub Repository](https://github.com/bioinformatics-project)
 
 Copyright | Behordeun 2025(c)
 """,
