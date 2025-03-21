@@ -1,8 +1,8 @@
 [theme]
 primaryColor = "#4CAF50"  # Genomic Green
-backgroundColor = "#F5F5F5"  # Soft Light Gray
-secondaryBackgroundColor = "#2B3A67"  # Adjusted to a softer dark blue
-textColor = "#FFFFFF"  # White text for visibility on dark areas
+backgroundColor = "#F8F9FA"  # Lighter Gray for a clean look
+secondaryBackgroundColor = "#34495E"  # Darker Blue-Grey for better contrast
+textColor = "#E0E0E0"  # Light Gray for better readability on dark areas
 font = "sans serif"
 
 [server]
