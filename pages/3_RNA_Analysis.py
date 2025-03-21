@@ -1,3 +1,5 @@
+from io import StringIO
+
 import streamlit as st
 from Bio import SeqIO
 
@@ -6,10 +8,16 @@ from utils import analyze_sequences, visualize_results
 st.title("🧬 RNA Sequence Analysis")
 
 # File Upload Section
-uploaded_file = st.file_uploader("Upload RNA Sequence File (FASTA)", type=["fasta"])
+uploaded_file = st.file_uploader(
+    "Upload RNA Sequence File (FASTA)", type=["fasta", "txt", "rtf"]
+)
+
 if uploaded_file:
+    # Convert file to text mode using StringIO
+    stringio = StringIO(uploaded_file.getvalue().decode("utf-8"))
+
     # Read and analyze sequences
-    sequences = list(SeqIO.parse(uploaded_file, "fasta"))
+    sequences = list(SeqIO.parse(stringio, "fasta-pearson"))
     sequence_df = analyze_sequences(sequences, is_rna=True)
 
     # Display results
