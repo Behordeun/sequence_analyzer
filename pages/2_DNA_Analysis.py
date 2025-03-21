@@ -32,7 +32,7 @@ if "sequence_df" not in st.session_state:
 
 # File Upload Section
 uploaded_file = st.file_uploader(
-    "Upload DNA Sequence File (FASTA)", type=["fasta", "txt", "rtf"]
+    "Upload DNA Sequence File (supported file type are fasta, txt, or rtf)", type=["fasta", "txt", "rtf"]
 )
 
 if uploaded_file:
