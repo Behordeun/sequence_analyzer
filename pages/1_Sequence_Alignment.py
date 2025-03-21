@@ -115,7 +115,7 @@ def align_sequences_msa(sequences):
     return aligned_fasta
 
 
-# Align Sequence Button
+# Align Sequence Button (Prevents automatic alignment)
 if sequences:
     if st.button("🔄 Align Sequence"):
         if alignment_method == "Pairwise Alignment":
