@@ -1,5 +1,19 @@
 import streamlit as st
 
+from style_css import style
+
+style()
+
+
+hide_streamlit_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            </style>
+            """
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
+
 st.title("📞 Contact")
 st.markdown(
     """

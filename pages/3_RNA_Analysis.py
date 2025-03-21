@@ -3,7 +3,20 @@ from io import StringIO
 import streamlit as st
 from Bio import SeqIO
 
+from style_css import style
 from utils import analyze_sequences, visualize_results
+
+style()
+
+
+hide_streamlit_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            </style>
+            """
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
 
 st.title("🧬 RNA Sequence Analysis")
 
