@@ -1,4 +1,5 @@
 from io import StringIO
+
 import streamlit as st
 from Bio import SeqIO
 
@@ -22,7 +23,10 @@ st.markdown(
 st.title("🧬 DNA Sequence Analysis")
 
 # **Reset session state when the user navigates to a different page**
-if "last_page" not in st.session_state or st.session_state["last_page"] != "DNA_Analysis":
+if (
+    "last_page" not in st.session_state
+    or st.session_state["last_page"] != "DNA_Analysis"
+):
     st.session_state.clear()
     st.session_state["last_page"] = "DNA_Analysis"
 
@@ -32,7 +36,8 @@ if "sequence_df" not in st.session_state:
 
 # File Upload Section
 uploaded_file = st.file_uploader(
-    "Upload DNA Sequence File (supported file type are fasta, txt, or rtf)", type=["fasta", "txt", "rtf"]
+    "Upload DNA Sequence File (supported file type are fasta, txt, or rtf)",
+    type=["fasta", "txt", "rtf"],
 )
 
 if uploaded_file:

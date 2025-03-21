@@ -1,4 +1,5 @@
 from io import StringIO
+
 import streamlit as st
 from Bio import SeqIO
 
@@ -22,7 +23,10 @@ st.markdown(
 st.title("🧬 RNA Sequence Analysis")
 
 # **Reset session state when the user navigates to a different page**
-if "last_page" not in st.session_state or st.session_state["last_page"] != "RNA_Analysis":
+if (
+    "last_page" not in st.session_state
+    or st.session_state["last_page"] != "RNA_Analysis"
+):
     st.session_state.clear()
     st.session_state["last_page"] = "RNA_Analysis"
 
@@ -32,7 +36,8 @@ if "sequence_df" not in st.session_state:
 
 # File Upload Section
 uploaded_file = st.file_uploader(
-    "Upload RNA Sequence File (supported file type are fasta, txt, or rtf)", type=["fasta", "txt", "rtf"]
+    "Upload RNA Sequence File (supported file type are fasta, txt, or rtf)",
+    type=["fasta", "txt", "rtf"],
 )
 
 if uploaded_file:
@@ -41,12 +46,12 @@ if uploaded_file:
 
     # Read sequences (handling comments with 'fasta-pearson' format)
     sequences = list(SeqIO.parse(stringio, "fasta-pearson"))
+    st.subheader("📄 Identified Sequences:")
 
-    # Display detected sequences
-    st.subheader("📄 Identified Sequences:")
-    for seq in sequences:
-        st.write(f"✅ {seq.id} - {len(seq.seq)} bp")
-    st.subheader("📄 Identified Sequences:")
+    # Analyze Button
+    if st.button("🔬 Analyze"):
+        st.session_state["sequence_df"] = analyze_sequences(sequences, is_rna=True)
+        st.success("✅ Analysis Completed!")
 
 # Display results if analysis has been performed
 if st.session_state["sequence_df"] is not None:
@@ -59,7 +64,7 @@ if st.session_state["sequence_df"] is not None:
     file_format = st.selectbox("📂 Select Download Format", [".csv", ".txt", ".rtf"])
 
     # Generate a dynamic file name
-    download_file_name = f"RNA_Analysis{file_format}"
+    download_file_name = f"rna_analysis{file_format}"
 
     # Convert DataFrame to selected format
     if file_format == ".csv":
