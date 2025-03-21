@@ -119,7 +119,7 @@ We welcome contributions to improve this application! To contribute:
 
 For inquiries or contributions, please reach out:
 
-- 📧 Email: **[mailto:abiodun.msulaiman@gmail.com](abiodun.msulaiman@gmail.com)**
+- 📧 Email: **[abiodun.msulaiman@gmail.com](mailto:abiodun.msulaiman@gmail.com), [bolajioyeyemi@gmail.com](mailto:bolajioyeyemi@gmail.com)**
 - 🛠 GitHub: **[Sequence Analyzer](https://github.com/Behordeun/sequence_analyzer)**
 
 ---
