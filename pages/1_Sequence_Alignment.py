@@ -54,20 +54,22 @@ elif option == "Enter Assertion Numbers":
     assertion_numbers = st.text_area(
         "Enter Assertion Numbers (one per line)"
     ).splitlines()
-    if assertion_numbers:
-        st.info("Fetching sequences from GenBank...")
-        genbank_sequences = [fetch_sequence(acc) for acc in assertion_numbers]
-        sequences.extend(
-            [SeqIO.read(StringIO(seq), "fasta") for seq in genbank_sequences if seq]
-        )
-        st.success(
-            f"{len(genbank_sequences)} sequences successfully retrieved from GenBank!"
-        )
 
-        # Display detected sequences
-        st.subheader("📄 Identified Sequences:")
-        for seq in sequences:
-            st.write(f"✅ {seq.id} - {len(seq.seq)} bp")
+    if assertion_numbers:
+        if st.button("🔍 Fetch Sequences from GenBank"):
+            st.info("Fetching sequences from GenBank...")
+            genbank_sequences = [fetch_sequence(acc) for acc in assertion_numbers]
+            sequences.extend(
+                [SeqIO.read(StringIO(seq), "fasta") for seq in genbank_sequences if seq]
+            )
+            st.success(
+                f"{len(genbank_sequences)} sequences successfully retrieved from GenBank!"
+            )
+
+            # Display detected sequences
+            st.subheader("📄 Identified Sequences:")
+            for seq in sequences:
+                st.write(f"✅ {seq.id} - {len(seq.seq)} bp")
 
 
 # Function for Pairwise Alignment using Biopython
