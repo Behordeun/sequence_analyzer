@@ -2,7 +2,7 @@
 primaryColor = "#4CAF50"  # Genomic Green
 backgroundColor = "#F8F9FA"  # Lighter Gray for a clean look
 secondaryBackgroundColor = "#34495E"  # Darker Blue-Grey for better contrast
-textColor = "#E0E0E0"  # Light Gray for better readability on dark areas
+textColor = "black"  # Light Gray for better readability on dark areas
 font = "sans serif"
 
 [server]
