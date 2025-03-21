@@ -14,10 +14,11 @@ For any inquiries or contributions, please reach out:
 st.markdown("---")  # Divider
 st.markdown(
     """
-    **🔖 Sequence Analyzer Application**  
-    Developed with ❤️ using **Streamlit, Biopython, and Plotly by [Behordeun](https://github.com/Behordeun) and [Bollergene](https://github.com/bollergene)**  
-    📅 Version: 1.0.0 | 🔗 [GitHub Repository](https://github.com/Behordeun/sequence_analyzer)
-    
-    """,
+Developed by [Behordeun](https://github.com/Behordeun) and [Bollergene](https://github.com/bollergene).  
+
+📅 Version: 1.0.0 | 🔗 [GitHub Repository](https://github.com/bioinformatics-project)
+
+Copyright | Behordeun 2025(c)
+""",
     unsafe_allow_html=True,
 )
