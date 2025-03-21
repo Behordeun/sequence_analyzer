@@ -1,8 +1,8 @@
 [theme]
-primaryColor = "#4CAF50"  # Genomic Green - highlights key elements
-backgroundColor = "#F5F5F5"  # Soft Light Gray - reduces eye strain
-secondaryBackgroundColor = "#1B3A4B"  # Deep Blue-Green - suitable for bioinformatics
-textColor = "#1C1C1C"  # Dark Gray - improves readability
+primaryColor = "#4CAF50"  # Genomic Green
+backgroundColor = "#F5F5F5"  # Soft Light Gray
+secondaryBackgroundColor = "#2B3A67"  # Adjusted to a softer dark blue
+textColor = "#FFFFFF"  # White text for visibility on dark areas
 font = "sans serif"
 
 [server]
