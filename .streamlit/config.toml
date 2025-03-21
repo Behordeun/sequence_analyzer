@@ -1,16 +1,8 @@
-#[theme]
-#primaryColor = "#B7F0C7" # Lighter
-#backgroundColor = "#FFFFFF"  # White
-#secondaryBackgroundColor = "#122C39" # Dark
-#textColor = "black"
-#font = "sans serif"
-
-
 [theme]
-primaryColor = "#D0F0D1"
-backgroundColor = "#FFFFFF"  # white
-secondaryBackgroundColor = "#D0F0D1"
-textColor = "black"
+primaryColor = "#4CAF50"  # Genomic Green - highlights key elements
+backgroundColor = "#F5F5F5"  # Soft Light Gray - reduces eye strain
+secondaryBackgroundColor = "#1B3A4B"  # Deep Blue-Green - suitable for bioinformatics
+textColor = "#1C1C1C"  # Dark Gray - improves readability
 font = "sans serif"
 
 [server]
