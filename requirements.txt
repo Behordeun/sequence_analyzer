@@ -1,6 +1,0 @@
-streamlit
-biopython
-plotly
-pandas
-watchdog
-bio
