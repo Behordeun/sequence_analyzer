@@ -4,7 +4,7 @@ st.title("📞 Contact")
 st.markdown(
     """
 For any inquiries or contributions, please reach out:
-- 📧 Email: **[abiodun.msulaiman@gmail.com](mailto:abiodun.msulaiman@gmail.com), [bolajioyeyemi@gmail.com](mailto:bolajioyeyemi@gmail.com)**
+- 📧 Email: 📧 Email: **[Muhammad Abiodun SULAIMAN](mailto:abiodun.msulaiman@gmail.com), [Bolaji Fatai OYEYEMI](mailto:bolajioyeyemi@gmail.com)**
 - 🛠 GitHub: **[Sequence Analyzer](https://github.com/Behordeun/sequence_analyzer)**
 """
 )
