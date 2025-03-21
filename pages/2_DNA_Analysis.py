@@ -41,11 +41,7 @@ if uploaded_file:
 
     # Read sequences (handling comments with 'fasta-pearson' format)
     sequences = list(SeqIO.parse(stringio, "fasta-pearson"))
-
-    # Display detected sequences
     st.subheader("📄 Identified Sequences:")
-    for seq in sequences:
-        st.write(f"✅ {seq.id} - {len(seq.seq)} bp")
 
     # Analyze Button
     if st.button("🔬 Analyze"):

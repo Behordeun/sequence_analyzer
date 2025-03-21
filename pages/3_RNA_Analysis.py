@@ -46,11 +46,7 @@ if uploaded_file:
     st.subheader("📄 Identified Sequences:")
     for seq in sequences:
         st.write(f"✅ {seq.id} - {len(seq.seq)} bp")
-
-    # Analyze Button
-    if st.button("🔬 Analyze"):
-        st.session_state["sequence_df"] = analyze_sequences(sequences, is_rna=False)
-        st.success("✅ Analysis Completed!")
+    st.subheader("📄 Identified Sequences:")
 
 # Display results if analysis has been performed
 if st.session_state["sequence_df"] is not None:
