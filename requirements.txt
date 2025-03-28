@@ -4,3 +4,5 @@ plotly
 pandas
 watchdog
 bio
+matplotlib
+kaleido
