@@ -175,3 +175,4 @@ cython_debug/
 
 *.csv
 .streamlit/secrets.toml
+sessions
