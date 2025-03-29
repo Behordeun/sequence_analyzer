@@ -14,7 +14,6 @@ from style_css import style
 # Apply custom styles
 style()
 
-# Hide Streamlit menu & footer
 st.markdown(
     """
     <style>
@@ -25,10 +24,9 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Page Title
 st.title("🌿 Phylogenetic Analysis")
 
-# Reset session on page change
+# Reset session on page load
 if (
     "last_page" not in st.session_state
     or st.session_state["last_page"] != "Phylogenetic_Analysis"
@@ -36,59 +34,72 @@ if (
     st.session_state.clear()
     st.session_state["last_page"] = "Phylogenetic_Analysis"
 
-# Initialize alignment storage
+# Session state for key elements
 if "alignment" not in st.session_state:
     st.session_state["alignment"] = None
+if "tree" not in st.session_state:
+    st.session_state["tree"] = None
+if "distance_matrix" not in st.session_state:
+    st.session_state["distance_matrix"] = None
 
 # Upload file
 uploaded_file = st.file_uploader(
     "Upload a DNA Sequence File (FASTA, TXT, RTF)", type=["fasta", "txt", "rtf"]
 )
 
-# Select method
+# Choose tree construction method and options
 method = st.selectbox(
     "🌳 Select Tree Construction Method", ["Neighbor Joining", "UPGMA"]
 )
-
-# Optional toggles
 show_branch_lengths = st.checkbox("📏 Show Branch Lengths", value=True)
 show_support_values = st.checkbox("📊 Show Support Values", value=False)
 
-if uploaded_file:
+# Run button
+analyze_clicked = st.button("🔬 Analyze Phylogenetic Tree")
+
+# Trigger analysis only when user clicks
+if uploaded_file and analyze_clicked:
     stringio = StringIO(uploaded_file.getvalue().decode("utf-8"))
     sequences = list(SeqIO.parse(stringio, "fasta-pearson"))
 
-    st.subheader("📄 Identified Sequences:")
-    for seq in sequences:
-        st.write(f"✅ {seq.id} - {len(seq.seq)} bp")
+    if sequences:
+        st.subheader("📄 Identified Sequences:")
+        for seq in sequences:
+            st.write(f"✅ {seq.id} - {len(seq.seq)} bp")
 
-    if st.button("🧬 Build Phylogenetic Tree"):
+        # Pad and align
         max_len = max(len(s.seq) for s in sequences)
-        padded = [s.seq.ljust(max_len, "-") for s in sequences]
+        padded = [str(s.seq).ljust(max_len, "-") for s in sequences]
         aligned = MultipleSeqAlignment(
-            [
-                SeqRecord(seq, id=s.id, description="")
-                for seq, s in zip(padded, sequences)
-            ]
+            [SeqRecord(seq, id=s.id, description="") for seq, s in zip(padded, sequences)]
         )
-        st.session_state["alignment"] = aligned
-        st.success("✅ Alignment Completed!")
 
-if st.session_state["alignment"]:
+        st.session_state["alignment"] = aligned
+
+        # Compute distance matrix and tree
+        calculator = DistanceCalculator("identity")
+        dist_matrix = calculator.get_distance(aligned)
+        constructor = DistanceTreeConstructor()
+        tree = (
+            constructor.nj(dist_matrix)
+            if method == "Neighbor Joining"
+            else constructor.upgma(dist_matrix)
+        )
+
+        # Save to session
+        st.session_state["distance_matrix"] = dist_matrix
+        st.session_state["tree"] = tree
+        st.success("✅ Phylogenetic Analysis Completed!")
+
+# Show results
+if st.session_state["alignment"] and st.session_state["tree"]:
     alignment = st.session_state["alignment"]
+    tree = st.session_state["tree"]
 
     st.subheader("📏 Distance Matrix")
-    calculator = DistanceCalculator("identity")
-    distance_matrix = calculator.get_distance(alignment)
-    st.dataframe(distance_matrix)
+    st.dataframe(st.session_state["distance_matrix"])
 
-    constructor = DistanceTreeConstructor()
-    tree = (
-        constructor.nj(distance_matrix)
-        if method == "Neighbor Joining"
-        else constructor.upgma(distance_matrix)
-    )
-
+    # Draw tree
     st.subheader("🌳 Phylogenetic Tree (Interactive Plot)")
 
     def get_plotly_tree_data(tree):
@@ -114,7 +125,6 @@ if st.session_state["alignment"]:
     for parent, child in edges:
         x0, y0 = coords[parent]
         x1, y1 = coords[child]
-
         hover_text = ""
         if show_branch_lengths and child.branch_length is not None:
             hover_text += f"Length: {child.branch_length:.3f} "
@@ -155,7 +165,7 @@ if st.session_state["alignment"]:
 
     st.plotly_chart(fig)
 
-    # 📥 Newick download
+    # Download as Newick
     tree_file = StringIO()
     Phylo.write(tree, tree_file, "newick")
     st.download_button(
@@ -164,7 +174,7 @@ if st.session_state["alignment"]:
         file_name="phylogenetic_tree.nwk",
     )
 
-    # 📥 Image export
+    # Export as image
     formats = ["PNG", "JPEG", "SVG", "PDF"]
     selected_format = st.selectbox("📁 Select Tree Image Format", formats)
 
