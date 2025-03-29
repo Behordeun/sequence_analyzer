@@ -194,24 +194,31 @@ if st.session_state["alignment"] and st.session_state["tree"]:
         )
 
     for clade, (x, y) in coords.items():
-        fig_tree.add_trace(
-            go.Scatter(
-                x=[x],
-                y=[-y],
-                mode="markers+text",
-                text=[labels[clade]],
-                textposition="right center",
-                marker=dict(color="blue", size=8),
-                hoverinfo="text",
-            )
-        )
+        label = labels[clade]
+
+        # Truncate label if it's too long
+        visible_label = label if len(label) <= 20 else label[:17] + "..."
+        
+        fig_tree.add_trace(go.Scatter(
+            x=[x],
+            y=[-y],
+            mode='markers+text',
+            text=[visible_label],
+            hovertext=[label],  # full label on hover
+            #textangle=0,
+            textfont=dict(size=10),
+            textposition='middle right',
+            marker=dict(color='blue', size=8),
+            hoverinfo='text'
+        ))
 
     fig_tree.update_layout(
         showlegend=False,
         title="Phylogenetic Tree",
+        margin=dict(l=50, r=200, t=50, b=50),  # Extra space on right
         xaxis=dict(showticklabels=False),
         yaxis=dict(showticklabels=False),
-        height=600,
+        height=max(600, len(coords) * 30),  # dynamic height for more tips
     )
 
     st.plotly_chart(fig_tree)
