@@ -1,6 +1,5 @@
 import datetime
 import json
-import os
 import re
 from io import StringIO
 
@@ -29,21 +28,15 @@ st.markdown(
 
 st.title("🔗 Sequence Alignment")
 
-SESSION_PATH = "last_alignment_session.json"
-if os.path.exists(SESSION_PATH):
-    with open(SESSION_PATH) as f:
-        try:
-            session_data = json.load(f)
-            st.session_state["sequences"] = list(
-                SeqIO.parse(StringIO("".join(session_data["sequences"])), "fasta")
-            )
-            st.session_state["aligned"] = session_data["result"]
-            st.session_state["metadata"] = session_data.get("metadata", {})
-            st.success("✅ Auto-resumed last session")
-        except Exception:
-            pass
+# Session state
+if "sequences" not in st.session_state:
+    st.session_state["sequences"] = []
+if "aligned" not in st.session_state:
+    st.session_state["aligned"] = ""
+if "metadata" not in st.session_state:
+    st.session_state["metadata"] = {}
 
-# User Input Options
+# Input Controls
 option = st.selectbox(
     "Choose Input Method",
     ["Upload Sequence File(s)", "Enter Assertion Numbers", "Reload Saved Session"],
@@ -53,211 +46,203 @@ alignment_method = st.radio(
     "🧬 Select Alignment Method", ["Pairwise Alignment", "Multiple Sequence Alignment"]
 )
 
-# Input sequence validators
+# Validators
 VALID_DNA = re.compile(r"^[ACGTURYKMSWBDHVN-]+$")
 VALID_PROTEIN = re.compile(r"^[ACDEFGHIKLMNPQRSTVWYBXZJUO-]+$")
 
 
 def clean_and_validate(record, seq_type):
-    seq = str(record.seq).upper().replace("\n", "").replace(" ", "")
+    seq = str(record.seq).upper().replace(" ", "").replace("\n", "")
     record.seq = Seq(seq)
     pattern = VALID_DNA if seq_type != "Protein" else VALID_PROTEIN
     if not pattern.match(seq):
-        st.warning(f"⚠️ Sequence '{record.id}' contains invalid characters: {seq}")
+        st.warning(f"⚠️ Sequence '{record.id}' contains invalid characters.")
     return record
 
 
-# Capture sequences into session
-if "sequences" not in st.session_state:
-    st.session_state["sequences"] = []
-
-# Upload option
+# Upload sequences
 if option == "Upload Sequence File(s)":
     uploaded_files = st.file_uploader(
-        "Upload Sequence Files (FASTA format)",
-        type=["fasta", "txt", "rtf"],
-        accept_multiple_files=True,
+        "Upload FASTA files", type=["fasta", "txt", "rtf"], accept_multiple_files=True
     )
     if uploaded_files:
-        uploaded_sequences = []
-        for uploaded_file in uploaded_files:
-            fasta_content = convert_to_fasta(uploaded_file)
-            fasta_records = list(SeqIO.parse(StringIO(fasta_content), "fasta"))
-            for record in fasta_records:
-                uploaded_sequences.append(clean_and_validate(record, sequence_type))
-        st.session_state["sequences"] = uploaded_sequences
-        st.success(f"{len(uploaded_sequences)} sequences uploaded!")
+        sequences = []
+        for file in uploaded_files:
+            content = convert_to_fasta(file)
+            records = SeqIO.parse(StringIO(content), "fasta")
+            for r in records:
+                sequences.append(clean_and_validate(r, sequence_type))
+        st.session_state["sequences"] = sequences
+        st.success(f"✅ {len(sequences)} sequences uploaded.")
 
-# GenBank option
+# GenBank input
 elif option == "Enter Assertion Numbers":
     assertion_numbers = st.text_area(
-        "Enter Assertion Numbers (one per line)"
+        "Enter GenBank Accession Numbers (one per line)"
     ).splitlines()
-    if assertion_numbers and st.button("🔍 Fetch Sequences from GenBank"):
-        genbank_sequences = [fetch_sequence(acc) for acc in assertion_numbers]
-        fetched_sequences = [
-            SeqIO.read(StringIO(seq), "fasta") for seq in genbank_sequences if seq
-        ]
-        for record in fetched_sequences:
-            clean_and_validate(record, sequence_type)
-        st.session_state["sequences"] = fetched_sequences
-        st.success(f"{len(fetched_sequences)} sequences retrieved!")
+    if assertion_numbers and st.button("🔍 Fetch Sequences"):
+        records = []
+        for acc in assertion_numbers:
+            fetched = fetch_sequence(acc)
+            try:
+                rec = SeqIO.read(StringIO(fetched), "fasta")
+                records.append(clean_and_validate(rec, sequence_type))
+            except Exception:
+                st.error(f"❌ Failed to parse {acc}")
+        st.session_state["sequences"] = records
+        st.success(f"✅ {len(records)} sequences retrieved.")
 
-# Reload saved .json or alignment
+# Reload previous session
 elif option == "Reload Saved Session":
     session_file = st.file_uploader(
-        "📁 Upload Saved File (.json, .nex, .phy)", type=["json", "nex", "phy"]
+        "📁 Upload Previous Session (.json, .nex, .phy)", type=["json", "nex", "phy"]
     )
     if session_file:
-        filename = session_file.name
-        if filename.endswith(".json"):
+        name = session_file.name
+        if name.endswith(".json"):
             session_data = json.load(session_file)
-            if st.checkbox("👀 Preview Session Before Loading"):
-                st.code(session_data["result"], language="html")
-            if st.button("🔁 Load Session"):
+            if st.checkbox("👀 Preview Session Data"):
+                st.code(session_data.get("result", "No content"), language="html")
+            if st.button("🔄 Load Session"):
                 st.session_state["sequences"] = list(
                     SeqIO.parse(StringIO("".join(session_data["sequences"])), "fasta")
                 )
                 st.session_state["aligned"] = session_data["result"]
                 st.session_state["metadata"] = session_data.get("metadata", {})
-                st.success("✅ Session reloaded successfully!")
+                st.success("✅ Session Loaded.")
         else:
-            fmt = "nexus" if filename.endswith(".nex") else "phylip"
             try:
+                fmt = "nexus" if name.endswith(".nex") else "phylip"
                 alignment = AlignIO.read(session_file, fmt)
-                records = [clean_and_validate(r, sequence_type) for r in alignment]
-                st.session_state["sequences"] = records
-                st.success(f"✅ {fmt.upper()} alignment loaded!")
-                st.info("📛 Taxon Names:")
-                for record in records:
-                    st.write(f"🔹 {record.id} - {len(record.seq)} bp")
-            except Exception as e:
-                st.error(f"❌ Failed to load alignment: {e}")
+                st.session_state["sequences"] = [
+                    clean_and_validate(r, sequence_type) for r in alignment
+                ]
+                st.success(f"✅ {fmt.upper()} alignment loaded.")
+            except Exception:
+                st.error("❌ Error loading alignment.")
 
-# Show preview before alignment
-if st.session_state["sequences"]:
-    if st.checkbox("👁️ Preview Sequences"):
-        st.subheader("📄 Identified Sequences:")
-        for seq in st.session_state["sequences"]:
-            st.write(f"✅ {seq.id} - {len(seq.seq)} bp")
+# Sequence preview
+if st.session_state["sequences"] and st.checkbox("👁️ Preview Sequences"):
+    for seq in st.session_state["sequences"]:
+        st.write(f"🔹 {seq.id} - {len(seq.seq)} bp")
 
 
-# Alignment logic
+# Highlight mismatches
 def highlight_mismatches(seq1, seq2):
-    return "<br>".join(
-        [
-            "".join(
-                f"<span class='{'match' if a == b else 'mismatch'}'>{a}</span>"
-                for a, b in zip(seq1, seq2)
-            ),
-            "".join(
-                f"<span class='{'match' if a == b else 'mismatch'}'>{b}</span>"
-                for a, b in zip(seq1, seq2)
-            ),
-        ]
-    )
+    html = []
+    for a, b in zip(seq1, seq2):
+        tag = "match" if a == b else "mismatch"
+        html.append(f"<span class='{tag}'>{a}</span>")
+    html.append("<br>")
+    for a, b in zip(seq1, seq2):
+        tag = "match" if a == b else "mismatch"
+        html.append(f"<span class='{tag}'>{b}</span>")
+    return "".join(html)
 
 
-def align_pairwise(sequences, matrix):
+# Pairwise align
+def align_pairwise(sequences, matrix, mode):
     aligner = PairwiseAligner()
-    aligner.mode = st.selectbox(
-        "🔧 Select Alignment Mode", ["global", "local", "semi-global"]
-    )
+    aligner.mode = mode
     try:
         aligner.substitution_matrix = substitution_matrices.load(matrix)
-    except Exception:
-        st.warning("⚠️ Could not load matrix.")
+    except:
+        st.warning("⚠️ Substitution matrix could not be loaded.")
     results = []
     for i in range(len(sequences) - 1):
-        alignment = aligner.align(sequences[i].seq, sequences[i + 1].seq)[0]
+        a = sequences[i]
+        b = sequences[i + 1]
+        alignment = aligner.align(a.seq, b.seq)[0]
+        seqA = str(alignment.target)
+        seqB = str(alignment.query)
+        identity = sum(1 for x, y in zip(seqA, seqB) if x == y) / len(seqA) * 100
         score = alignment.score
-        seqA, seqB = str(alignment.target), str(alignment.query)
-        identity = sum(a == b for a, b in zip(seqA, seqB)) / len(seqA) * 100
-        block = highlight_mismatches(seqA, seqB)
         results.append(
-            f"<b>{sequences[i].id} vs {sequences[i+1].id}</b><br><b>Score:</b> {score:.2f}, <b>Identity:</b> {identity:.1f}%<br>{block}<br><br>"
+            f"<b>{a.id} vs {b.id}</b><br>Score: {score:.2f}, Identity: {identity:.1f}%<br>"
         )
-    return "<br>".join(results)
+        results.append(highlight_mismatches(seqA, seqB))
+        results.append("<br><br>")
+    return "".join(results)
 
 
+# MSA align
 def align_msa(sequences):
-    max_len = max(len(s.seq) for s in sequences)
+    max_len = max(len(r.seq) for r in sequences)
     padded = [
-        SeqRecord(Seq(str(s.seq).ljust(max_len, "-")), id=s.id) for s in sequences
+        SeqRecord(Seq(str(r.seq).ljust(max_len, "-")), id=r.id) for r in sequences
     ]
     alignment = MultipleSeqAlignment(padded)
-    motif = motifs.create([s.seq for s in alignment])
+    motif = motifs.create([r.seq for r in alignment])
     consensus = motif.consensus
     clustal_io = StringIO()
     AlignIO.write(alignment, clustal_io, "clustal")
     st.session_state["clustal"] = clustal_io.getvalue()
     return (
-        "<br>".join([f">{s.id}<br>{s.seq}" for s in padded])
+        "<br>".join([f">{r.id}<br>{r.seq}" for r in padded])
         + f"<br>>Consensus<br>{consensus}"
     )
 
 
-# Align Button
+# Run alignment
 if st.session_state["sequences"]:
-    if st.button("🔄 Align Sequence"):
-        matrix_name = st.selectbox(
-            "Choose Scoring Matrix",
-            (
-                ["BLOSUM62", "BLOSUM80"]
-                if sequence_type == "Protein"
-                else ["NUC.4.4", "IDENTITY"]
-            ),
-        )
-        if sequence_type == "DNA":
-            reverse_view = st.checkbox("Show reverse complement")
-            if reverse_view:
-                for seq in st.session_state["sequences"]:
-                    seq.seq = seq.seq.reverse_complement()
-                st.success("🔁 Reverse complement applied")
+    matrix_options = (
+        ["BLOSUM62", "BLOSUM80"]
+        if sequence_type == "Protein"
+        else ["NUC.4.4", "IDENTITY"]
+    )
+    matrix_name = st.selectbox("Select Scoring Matrix", matrix_options)
+    align_mode = st.selectbox(
+        "🔧 Select Alignment Mode", ["global", "local", "semi-global"]
+    )
+    if st.button("🔄 Align Sequences"):
+        if sequence_type == "DNA" and st.checkbox("🔁 Apply Reverse Complement"):
+            for seq in st.session_state["sequences"]:
+                seq.seq = seq.seq.reverse_complement()
 
         if alignment_method == "Pairwise Alignment":
-            aligned_html = align_pairwise(st.session_state["sequences"], matrix_name)
+            result_html = align_pairwise(
+                st.session_state["sequences"], matrix_name, align_mode
+            )
         else:
-            aligned_html = align_msa(st.session_state["sequences"])
+            result_html = align_msa(st.session_state["sequences"])
 
-        st.session_state["aligned"] = aligned_html
+        st.session_state["aligned"] = result_html
         st.session_state["metadata"] = {
             "matrix": matrix_name,
             "method": alignment_method,
             "type": sequence_type,
+            "mode": align_mode,
             "timestamp": str(datetime.datetime.now()),
         }
-        with open(SESSION_PATH, "w") as f:
-            json.dump(
-                {
-                    "sequences": [
-                        s.format("fasta") for s in st.session_state["sequences"]
-                    ],
-                    "result": aligned_html,
-                    "metadata": st.session_state["metadata"],
-                },
-                f,
-            )
-        st.success("✅ Alignment complete!")
+        st.success("✅ Alignment Complete!")
 
-# Show results
-if "aligned" in st.session_state:
+# Output tabs
+if st.session_state["aligned"]:
     if st.checkbox("📄 Show Alignment Output"):
-        if st.checkbox("📑 Show Alignment Metadata"):
-            meta = st.session_state.get("metadata", {})
+        st.tabs(["🧬 Alignment View"])
+
+        #with tab1:
+        with st.expander("🔬 Expand Alignment Output", expanded=True):
+            st.markdown(st.session_state["aligned"], unsafe_allow_html=True)
+
+        # with tab2:
+        #     with st.expander("📖 View Raw HTML Code"):
+        #         st.code(st.session_state["aligned"], language="html")
+
+        if st.checkbox("📑 Show Metadata"):
+            meta = st.session_state["metadata"]
             st.markdown(
                 f"""
-                <div style='background-color:#f8f8f8; padding:10px;'>
-                    <b>Method:</b> {meta.get("method", "N/A")}<br>
-                    <b>Matrix:</b> {meta.get("matrix", "N/A")}<br>
-                    <b>Type:</b> {meta.get("type", "N/A")}<br>
-                    <b>Time:</b> {meta.get("timestamp", "N/A")}
+                <div style='background-color:#f0f0f0; padding:10px;'>
+                <b>Type:</b> {meta.get("type")}<br>
+                <b>Method:</b> {meta.get("method")}<br>
+                <b>Matrix:</b> {meta.get("matrix")}<br>
+                <b>Mode:</b> {meta.get("mode")}<br>
+                <b>Time:</b> {meta.get("timestamp")}
                 </div>
             """,
                 unsafe_allow_html=True,
             )
-
-        st.markdown(st.session_state["aligned"], unsafe_allow_html=True)
 
         file_format = st.selectbox(
             "📥 Download Format", [".fasta", ".rtf", ".txt", ".clustal", ".nex", ".phy"]
@@ -274,14 +259,14 @@ if "aligned" in st.session_state:
         session_name = st.text_input("💾 Session Name", value="alignment_session")
         if st.button("💾 Save Alignment Session"):
             session = {
-                "sequences": [s.format("fasta") for s in st.session_state["sequences"]],
+                "sequences": [r.format("fasta") for r in st.session_state["sequences"]],
                 "result": st.session_state["aligned"],
-                "metadata": st.session_state.get("metadata", {}),
+                "metadata": st.session_state["metadata"],
             }
-            json_str = json.dumps(session, indent=2)
+            json_data = json.dumps(session, indent=2)
             st.download_button(
                 "📁 Download Session (.json)",
-                json_str,
+                data=json_data,
                 file_name=f"{session_name}.json",
             )
 
@@ -290,8 +275,9 @@ st.markdown("---")
 st.markdown(
     """
 <p style="text-align:center;font-size:14px">
-Developed by <a href="https://github.com/Behordeun">Behordeun</a> and <a href="https://github.com/bollergene">Bollergene</a><br>
-📞 +2348108316393 | © Behordeun 2025
+    Developed by <a href="https://github.com/Behordeun">Behordeun</a> and 
+    <a href="https://github.com/bollergene">Bollergene</a><br>
+    📞 +2348108316393 | © Behordeun 2025
 </p>
 """,
     unsafe_allow_html=True,
