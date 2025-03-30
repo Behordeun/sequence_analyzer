@@ -86,18 +86,17 @@ def highlight_alignment(seq1, seq2):
 
 
 def gc_skew_plot(sequences):
-    data = []
+    rows = []
+    window_size = 100
     for rec in sequences:
         seq = str(rec.seq).upper()
-        skew = []
-        for i in range(0, len(seq) - 100 + 1):
-            win = seq[i : i + 100]
+        for i in range(len(seq) - window_size + 1):
+            win = seq[i : i + window_size]
             g, c = win.count("G"), win.count("C")
-            skew.append((g - c) / (g + c) if (g + c) else 0)
-        data.append((rec.id, skew))
-    fig = px.line(title="GC Skew")
-    for rec_id, skew in data:
-        fig.add_scatter(x=list(range(len(skew))), y=skew, name=rec_id)
+            skew = (g - c) / (g + c) if (g + c) else 0
+            rows.append({"ID": rec.id, "Position": i, "GC Skew": skew})
+    df = pd.DataFrame(rows)
+    fig = px.line(df, x="Position", y="GC Skew", color="ID", title="GC Skew")
     return fig
 
 
@@ -160,34 +159,24 @@ def align_pairwise(sequences, matrix, mode):
 
 def align_msa(sequences):
     max_len = max(len(r.seq) for r in sequences)
-
-    # Determine molecule type
-    if seq_type_choice == "Auto":
-        types = [auto_detect_seq_type(str(r.seq)) for r in sequences]
-        mol_type = max(set(types), key=types.count).upper()
-    else:
-        mol_type = seq_type_choice.upper()
-
-    # Pad and annotate sequences
-    padded = []
-    for r in sequences:
-        rec = SeqRecord(Seq(str(r.seq).ljust(max_len, "-")), id=r.id, description="")
-        rec.annotations["molecule_type"] = mol_type
-        padded.append(rec)
-
-    # Create alignment
+    mol_type = (
+        auto_detect_seq_type(str(sequences[0].seq))
+        if seq_type_choice == "Auto"
+        else seq_type_choice.upper()
+    )
+    padded = [
+        SeqRecord(
+            Seq(str(r.seq).ljust(max_len, "-")),
+            id=r.id,
+            annotations={"molecule_type": mol_type},
+        )
+        for r in sequences
+    ]
     alignment = MultipleSeqAlignment(padded)
     alignment.annotations["molecule_type"] = mol_type
-
-    # Save to file formats
-    try:
-        AlignIO.write(alignment, "sequences/clustal.aln", "clustal")
-        AlignIO.write(alignment, "sequences/nexus.nex", "nexus")
-        AlignIO.write(alignment, "sequences/phylip.phy", "phylip")
-    except ValueError as e:
-        st.error(f"Alignment writing failed: {e}")
-        return ""
-
+    AlignIO.write(alignment, "sequences/clustal.aln", "clustal")
+    AlignIO.write(alignment, "sequences/nexus.nex", "nexus")
+    AlignIO.write(alignment, "sequences/phylip.phy", "phylip")
     st.session_state.update(
         {
             "clustal": open("sequences/clustal.aln").read(),
@@ -195,26 +184,20 @@ def align_msa(sequences):
             "phylip": open("sequences/phylip.phy").read(),
         }
     )
-
-    # Build color-coded alignment
     seq_matrix = [str(r.seq) for r in padded]
-    n_seq = len(seq_matrix)
-    highlighted_lines = []
-
-    for i in range(n_seq):
+    html_lines = []
+    for i in range(len(seq_matrix)):
         line = f"<b>{padded[i].id}</b><br>"
         for j, base in enumerate(seq_matrix[i]):
-            ref = seq_matrix[0][j]  # Reference base
-            css_class = "match" if base == ref else "mismatch"
-            line += f"<span class='{css_class}'>{base}</span>"
-        highlighted_lines.append(line + "<br>")
-
-    # Consensus line
+            ref = seq_matrix[0][j]
+            css = "match" if base == ref else "mismatch"
+            line += f"<span class='{css}'>{base}</span>"
+        html_lines.append(line + "<br>")
     consensus = "".join(
         Counter(col).most_common(1)[0][0] if any(b != "-" for b in col) else "-"
         for col in zip(*seq_matrix)
     )
-    consensus_line = "<b>Consensus</b><br>" + "".join(
+    consensus_html = "<b>Consensus</b><br>" + "".join(
         (
             f"<span class='match'>{c}</span>"
             if c != "-"
@@ -222,8 +205,7 @@ def align_msa(sequences):
         )
         for c in consensus
     )
-
-    return "<br>".join(highlighted_lines + [consensus_line])
+    return "<br>".join(html_lines + [consensus_html])
 
 
 # --- File Input ---
@@ -245,20 +227,59 @@ if option == "Upload Sequence File(s)":
         st.success(f"✅ {len(valid)} valid sequences loaded.")
 
 elif option == "Enter Accession Numbers":
-    acc_input = st.text_area("🔍 Enter Accession Numbers (one per line)")
-    if acc_input and st.button("📥 Fetch Sequences"):
-        fetched = []
+    acc_input = st.text_area("🔍 Enter Accession Numbers (one per line)", height=120)
+
+    if st.button("📥 Retrieve Sequences"):
+        fetched, raw = [], []
         for acc in acc_input.strip().splitlines():
             try:
-                data = fetch_sequence(acc.strip())
+                data = fetch_sequence(acc.strip())  # From your utils.py
                 record = SeqIO.read(StringIO(data), "fasta")
-                val = clean_and_validate(record)
-                if val:
-                    fetched.append(val)
+                fetched.append(record)
+                raw.append(data)
             except Exception as e:
-                st.warning(f"⚠️ Error: {acc} - {e}")
+                st.warning(f"⚠️ Could not fetch {acc}: {e}")
         st.session_state["sequences"] = fetched
-        st.success(f"✅ {len(fetched)} sequences fetched")
+        st.session_state["fetched_raw"] = raw
+        st.success(f"✅ Retrieved {len(fetched)} sequence(s) from GenBank.")
+
+    # After retrieval, allow export before alignment
+    # Toggle view for retrieved sequences
+    if st.session_state["sequences"]:
+        st.session_state["show_fetched"] = st.checkbox(
+            "👁️ Show Retrieved Sequences", value=True
+        )
+
+        if st.session_state["show_fetched"]:
+            st.subheader("📄 Retrieved Sequences")
+            for rec in st.session_state["sequences"]:
+                st.text(f">{rec.id}\n{rec.seq}")
+
+        # Export options
+        export_fmt = st.selectbox(
+            "📁 Download Fetched Sequences As", [".fasta", ".txt", ".json"]
+        )
+        if export_fmt == ".fasta":
+            out = "\n".join(
+                s.format("fasta").strip() for s in st.session_state["sequences"]
+            )
+        elif export_fmt == ".txt":
+            out = "\n".join(f">{s.id}\n{s.seq}" for s in st.session_state["sequences"])
+        elif export_fmt == ".json":
+            out = {
+                "fetched": [r.format("fasta") for r in st.session_state["sequences"]],
+                "metadata": {
+                    "source": "GenBank",
+                    "count": len(st.session_state["sequences"]),
+                },
+            }
+            import json
+
+            out = json.dumps(out, indent=2)
+
+        st.download_button(
+            "⬇️ Download Retrieved Data", out, file_name=f"fetched_sequences{export_fmt}"
+        )
 
 # --- Alignment Options ---
 if st.session_state["sequences"]:
