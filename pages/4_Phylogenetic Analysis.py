@@ -57,9 +57,13 @@ def compute_distance(seqs, model):
     filtered = [
         s for s in seqs if len(s) == base_len and set(str(s)).isdisjoint({"-", "N"})
     ]
-    if len(filtered) < 2:
-        st.error("❌ Not enough clean sequences.")
+
+    if len(filtered) < 3:
+        st.error(
+            "❌ At least 3 valid sequences are required to build a phylogenetic tree."
+        )
         st.stop()
+
     if len(filtered) != len(seqs):
         st.warning(f"⚠️ Skipped {len(seqs) - len(filtered)} invalid sequences.")
 
