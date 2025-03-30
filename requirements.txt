@@ -7,3 +7,4 @@ bio
 matplotlib
 kaleido
 scikit-bio
+python-docx
