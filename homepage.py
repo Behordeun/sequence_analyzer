@@ -40,10 +40,10 @@ The **Sequence Analyzer Application** is built to help researchers, students, an
 ---
 
 ## ⚙️ **Tech Stack**
-- **Streamlit** – For the interactive web UI
-- **Biopython** – For sequence parsing, alignment, and phylogenetics
-- **Plotly & Matplotlib** – For visualizations
-- **Python** – The underlying language powering all logic
+- **Streamlit** - For the interactive web UI
+- **Biopython** - For sequence parsing, alignment, and phylogenetics
+- **Plotly & Matplotlib** - For visualizations
+- **Python** - The underlying language powering all logic
 
 ---
 
