@@ -6,3 +6,4 @@ watchdog
 bio
 matplotlib
 kaleido
+scikit-bio
