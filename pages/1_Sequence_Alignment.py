@@ -1,19 +1,18 @@
 import datetime
 import json
 import re
+from collections import Counter
 from io import StringIO
 
+import pandas as pd
+import plotly.express as px
 import streamlit as st
-from Bio import AlignIO, SeqIO, motifs
+from Bio import AlignIO, SeqIO
 from Bio.Align import MultipleSeqAlignment, PairwiseAligner, substitution_matrices
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-from style_css import style
-from utils import convert_to_fasta, fetch_sequence
-
-style()
-
+st.set_page_config(layout="wide")
 st.markdown(
     """
     <style>
@@ -21,159 +20,156 @@ st.markdown(
     footer {visibility: hidden;}
     span.match { color: green; font-weight: bold; }
     span.mismatch { color: red; font-weight: bold; }
+    span.motif { background-color: yellow; font-weight: bold; }
     </style>
 """,
     unsafe_allow_html=True,
 )
 
-st.title("🔗 Sequence Alignment")
+st.title("🔗 Sequence Alignment, GC Skew, and Motif Analysis")
 
-# Session state
-if "sequences" not in st.session_state:
-    st.session_state["sequences"] = []
-if "aligned" not in st.session_state:
-    st.session_state["aligned"] = ""
-if "metadata" not in st.session_state:
-    st.session_state["metadata"] = {}
+st.session_state.setdefault("sequences", [])
+st.session_state.setdefault("aligned", "")
+st.session_state.setdefault("metadata", {})
+st.session_state.setdefault("errors", [])
 
-# Input Controls
 option = st.selectbox(
     "Choose Input Method",
     ["Upload Sequence File(s)", "Enter Assertion Numbers", "Reload Saved Session"],
 )
-sequence_type = st.radio("🔬 Select Sequence Type", ["DNA", "RNA", "Protein"])
+seq_type_choice = st.radio("🔬 Sequence Type", ["Auto", "DNA", "RNA", "Protein"])
 alignment_method = st.radio(
-    "🧬 Select Alignment Method", ["Pairwise Alignment", "Multiple Sequence Alignment"]
+    "🧬 Alignment Method", ["Pairwise Alignment", "Multiple Sequence Alignment"]
 )
 
-# Validators
-VALID_DNA = re.compile(r"^[ACGTURYKMSWBDHVN-]+$")
-VALID_PROTEIN = re.compile(r"^[ACDEFGHIKLMNPQRSTVWYBXZJUO-]+$")
+ALPHABETS = {
+    "DNA": "ACGTURYKMSWBDHVN-",
+    "RNA": "ACGUURYKMSWBDHVN-",
+    "Protein": "ACDEFGHIKLMNPQRSTVWYBXZJUO-",
+}
+REPLACEMENTS = {"N": "-", "X": "-", "J": "-", "U": "U", "O": "-"}
 
 
-def clean_and_validate(record, seq_type):
+# --- Helper Functions ---
+def auto_detect_seq_type(seq):
+    seq = seq.upper()
+    counts = {t: sum(1 for x in seq if x in ALPHABETS[t]) for t in ALPHABETS}
+    return max(counts, key=counts.get)
+
+
+def clean_and_validate(record):
+    errors = []
     seq = str(record.seq).upper().replace(" ", "").replace("\n", "")
-    record.seq = Seq(seq)
-    pattern = VALID_DNA if seq_type != "Protein" else VALID_PROTEIN
-    if not pattern.match(seq):
-        st.warning(f"⚠️ Sequence '{record.id}' contains invalid characters.")
-    return record
-
-
-# Upload sequences
-if option == "Upload Sequence File(s)":
-    uploaded_files = st.file_uploader(
-        "Upload FASTA files", type=["fasta", "txt", "rtf"], accept_multiple_files=True
+    detected = (
+        auto_detect_seq_type(seq) if seq_type_choice == "Auto" else seq_type_choice
     )
-    if uploaded_files:
-        sequences = []
-        for file in uploaded_files:
-            content = convert_to_fasta(file)
-            records = SeqIO.parse(StringIO(content), "fasta")
-            for r in records:
-                sequences.append(clean_and_validate(r, sequence_type))
-        st.session_state["sequences"] = sequences
-        st.success(f"✅ {len(sequences)} sequences uploaded.")
-
-# GenBank input
-elif option == "Enter Assertion Numbers":
-    assertion_numbers = st.text_area(
-        "Enter GenBank Accession Numbers (one per line)"
-    ).splitlines()
-    if assertion_numbers and st.button("🔍 Fetch Sequences"):
-        records = []
-        for acc in assertion_numbers:
-            fetched = fetch_sequence(acc)
-            try:
-                rec = SeqIO.read(StringIO(fetched), "fasta")
-                records.append(clean_and_validate(rec, sequence_type))
-            except Exception:
-                st.error(f"❌ Failed to parse {acc}")
-        st.session_state["sequences"] = records
-        st.success(f"✅ {len(records)} sequences retrieved.")
-
-# Reload previous session
-elif option == "Reload Saved Session":
-    session_file = st.file_uploader(
-        "📁 Upload Previous Session (.json, .nex, .phy)", type=["json", "nex", "phy"]
-    )
-    if session_file:
-        name = session_file.name
-        if name.endswith(".json"):
-            session_data = json.load(session_file)
-            if st.checkbox("👀 Preview Session Data"):
-                st.code(session_data.get("result", "No content"), language="html")
-            if st.button("🔄 Load Session"):
-                st.session_state["sequences"] = list(
-                    SeqIO.parse(StringIO("".join(session_data["sequences"])), "fasta")
-                )
-                st.session_state["aligned"] = session_data["result"]
-                st.session_state["metadata"] = session_data.get("metadata", {})
-                st.success("✅ Session Loaded.")
-        else:
-            try:
-                fmt = "nexus" if name.endswith(".nex") else "phylip"
-                alignment = AlignIO.read(session_file, fmt)
-                st.session_state["sequences"] = [
-                    clean_and_validate(r, sequence_type) for r in alignment
-                ]
-                st.success(f"✅ {fmt.upper()} alignment loaded.")
-            except Exception:
-                st.error("❌ Error loading alignment.")
-
-# Sequence preview
-if st.session_state["sequences"] and st.checkbox("👁️ Preview Sequences"):
-    for seq in st.session_state["sequences"]:
-        st.write(f"🔹 {seq.id} - {len(seq.seq)} bp")
+    cleaned = "".join(REPLACEMENTS.get(n, n) for n in seq)
+    if not all(n in ALPHABETS[detected] for n in cleaned):
+        errors.append(f"❌ {record.id} skipped due to invalid characters")
+        return None, errors, detected
+    record.seq = Seq(cleaned)
+    return record, errors, detected
 
 
-# Highlight mismatches
-def highlight_mismatches(seq1, seq2):
-    html = []
+def highlight_alignment(seq1, seq2, motif_regex):
+    html1, html2 = [], []
     for a, b in zip(seq1, seq2):
         tag = "match" if a == b else "mismatch"
-        html.append(f"<span class='{tag}'>{a}</span>")
-    html.append("<br>")
-    for a, b in zip(seq1, seq2):
-        tag = "match" if a == b else "mismatch"
-        html.append(f"<span class='{tag}'>{b}</span>")
-    return "".join(html)
+        html1.append(f"<span class='{tag}'>{a}</span>")
+        html2.append(f"<span class='{tag}'>{b}</span>")
+    return "".join(html1) + "<br>" + "".join(html2)
 
 
-# Pairwise align
-def align_pairwise(sequences, matrix, mode):
+def motif_scan(sequences, pattern):
+    results = []
+    for rec in sequences:
+        seq = str(rec.seq)
+        matches = [m.start() + 1 for m in re.finditer(pattern, seq)]
+        results.append(
+            {
+                "ID": rec.id,
+                "Pattern": pattern,
+                "Hits": len(matches),
+                "Positions": matches,
+            }
+        )
+    return pd.DataFrame(results)
+
+
+def gc_skew_plot(sequences):
+    data = []
+    for rec in sequences:
+        seq = str(rec.seq).upper()
+        window = 100
+        gc_skew = []
+        for i in range(0, len(seq) - window + 1):
+            win = seq[i : i + window]
+            g = win.count("G")
+            c = win.count("C")
+            skew = (g - c) / (g + c) if (g + c) > 0 else 0
+            gc_skew.append(skew)
+        data.append((rec.id, gc_skew))
+    fig = px.line(title="GC Skew", labels={"value": "GC Skew", "index": "Position"})
+    for rec_id, skew in data:
+        fig.add_scatter(x=list(range(len(skew))), y=skew, name=rec_id)
+    return fig
+
+
+def base_composition_summary(sequences):
+    summary = []
+    for rec in sequences:
+        seq = str(rec.seq).upper()
+        a, t, g, c = seq.count("A"), seq.count("T"), seq.count("G"), seq.count("C")
+        total = len(seq.replace("-", ""))
+        summary.append(
+            {
+                "ID": rec.id,
+                "Length": total,
+                "A%": round(a / total * 100, 2),
+                "T%": round(t / total * 100, 2),
+                "G%": round(g / total * 100, 2),
+                "C%": round(c / total * 100, 2),
+                "GC%": round((g + c) / total * 100, 2),
+            }
+        )
+    return pd.DataFrame(summary)
+
+
+def batch_export_metadata(sequences):
+    data = [
+        {"ID": rec.id, "Description": rec.description, "Length": len(rec.seq)}
+        for rec in sequences
+    ]
+    return pd.DataFrame(data)
+
+
+def align_pairwise(seqs, matrix, mode, motif_regex):
     aligner = PairwiseAligner()
     aligner.mode = mode
     try:
         aligner.substitution_matrix = substitution_matrices.load(matrix)
     except:
-        st.warning("⚠️ Substitution matrix could not be loaded.")
-    results = []
-    for i in range(len(sequences) - 1):
-        a = sequences[i]
-        b = sequences[i + 1]
-        alignment = aligner.align(a.seq, b.seq)[0]
-        seqA = str(alignment.target)
-        seqB = str(alignment.query)
-        identity = sum(1 for x, y in zip(seqA, seqB) if x == y) / len(seqA) * 100
-        score = alignment.score
-        results.append(
-            f"<b>{a.id} vs {b.id}</b><br>Score: {score:.2f}, Identity: {identity:.1f}%<br>"
+        st.warning("⚠️ Matrix not found")
+    blocks = []
+    for i in range(len(seqs) - 1):
+        a, b = seqs[i], seqs[i + 1]
+        aln = aligner.align(a.seq, b.seq)[0]
+        sa, sb = str(aln.target), str(aln.query)
+        identity = sum(x == y for x, y in zip(sa, sb)) / len(sa) * 100
+        blocks.append(
+            f"<b>{a.id} vs {b.id}</b><br>Score: {aln.score:.2f}, Identity: {identity:.1f}%<br>{highlight_alignment(sa, sb, motif_regex)}<br><br>"
         )
-        results.append(highlight_mismatches(seqA, seqB))
-        results.append("<br><br>")
-    return "".join(results)
+    return "".join(blocks)
 
 
-# MSA align
-def align_msa(sequences):
-    max_len = max(len(r.seq) for r in sequences)
-    padded = [
-        SeqRecord(Seq(str(r.seq).ljust(max_len, "-")), id=r.id) for r in sequences
-    ]
+def align_msa(seqs):
+    max_len = max(len(r.seq) for r in seqs)
+    padded = [SeqRecord(Seq(str(r.seq).ljust(max_len, "-")), id=r.id) for r in seqs]
     alignment = MultipleSeqAlignment(padded)
-    motif = motifs.create([r.seq for r in alignment])
-    consensus = motif.consensus
+    consensus = "".join(
+        "-" if all(b == "-" for b in col) else Counter(col).most_common(1)[0][0]
+        for col in zip(*[str(rec.seq) for rec in padded])
+    )
     clustal_io = StringIO()
     AlignIO.write(alignment, clustal_io, "clustal")
     st.session_state["clustal"] = clustal_io.getvalue()
@@ -183,101 +179,137 @@ def align_msa(sequences):
     )
 
 
-# Run alignment
+# --- File Upload Section ---
+if option == "Upload Sequence File(s)":
+    uploaded = st.file_uploader(
+        "Upload FASTA", type=["fasta", "txt", "rtf"], accept_multiple_files=True
+    )
+    if uploaded:
+        seqs, errors = [], []
+        for f in uploaded:
+            content = f.read().decode("utf-8")
+            for rec in SeqIO.parse(StringIO(content), "fasta"):
+                r, e, _ = clean_and_validate(rec)
+                if r:
+                    seqs.append(r)
+                errors += e
+        st.session_state.update(sequences=seqs, errors=errors)
+        st.success(f"✅ {len(seqs)} valid sequences loaded")
+
+# --- Alignment Section ---
 if st.session_state["sequences"]:
-    matrix_options = (
-        ["BLOSUM62", "BLOSUM80"]
-        if sequence_type == "Protein"
-        else ["NUC.4.4", "IDENTITY"]
+    matrix = st.selectbox(
+        "Scoring Matrix",
+        (
+            ["BLOSUM62", "BLOSUM80"]
+            if seq_type_choice == "Protein"
+            else ["NUC.4.4", "IDENTITY"]
+        ),
     )
-    matrix_name = st.selectbox("Select Scoring Matrix", matrix_options)
-    align_mode = st.selectbox(
-        "🔧 Select Alignment Mode", ["global", "local", "semi-global"]
-    )
+    mode = st.selectbox("Alignment Mode", ["global", "local", "semi-global"])
+    motif_input = st.text_input("Motif Pattern (Regex)", value="ATG")
+    motif_regex = re.compile(motif_input, re.IGNORECASE)
+
     if st.button("🔄 Align Sequences"):
-        if sequence_type == "DNA" and st.checkbox("🔁 Apply Reverse Complement"):
-            for seq in st.session_state["sequences"]:
-                seq.seq = seq.seq.reverse_complement()
+        if seq_type_choice == "DNA" and st.checkbox("🔁 Reverse Complement"):
+            for s in st.session_state["sequences"]:
+                s.seq = s.seq.reverse_complement()
 
-        if alignment_method == "Pairwise Alignment":
-            result_html = align_pairwise(
-                st.session_state["sequences"], matrix_name, align_mode
-            )
-        else:
-            result_html = align_msa(st.session_state["sequences"])
+        aligned = (
+            align_pairwise(st.session_state["sequences"], matrix, mode, motif_regex)
+            if alignment_method == "Pairwise Alignment"
+            else align_msa(st.session_state["sequences"])
+        )
 
-        st.session_state["aligned"] = result_html
-        st.session_state["metadata"] = {
-            "matrix": matrix_name,
-            "method": alignment_method,
-            "type": sequence_type,
-            "mode": align_mode,
-            "timestamp": str(datetime.datetime.now()),
-        }
-        st.success("✅ Alignment Complete!")
+        st.session_state.update(
+            aligned=aligned,
+            metadata={
+                "matrix": matrix,
+                "method": alignment_method,
+                "type": seq_type_choice,
+                "mode": mode,
+                "motif": motif_input,
+                "timestamp": str(datetime.datetime.now()),
+            },
+        )
+        st.success("✅ Alignment completed")
 
-# Output tabs
+# --- Output Section ---
 if st.session_state["aligned"]:
-    if st.checkbox("📄 Show Alignment Output"):
-        st.tabs(["🧬 Alignment View"])
+    st.subheader("📄 Aligned Sequences")
+    st.markdown(st.session_state["aligned"], unsafe_allow_html=True)
 
-        #with tab1:
-        with st.expander("🔬 Expand Alignment Output", expanded=True):
-            st.markdown(st.session_state["aligned"], unsafe_allow_html=True)
+    st.subheader("📊 GC Skew Visualization")
+    st.plotly_chart(gc_skew_plot(st.session_state["sequences"]))
 
-        # with tab2:
-        #     with st.expander("📖 View Raw HTML Code"):
-        #         st.code(st.session_state["aligned"], language="html")
+    st.subheader("🧬 Motif Scan Table")
+    motif_df = motif_scan(st.session_state["sequences"], motif_input)
+    st.dataframe(motif_df)
+    st.download_button(
+        "📥 Download Motif Table",
+        motif_df.to_csv(index=False),
+        file_name="motif_hits.csv",
+    )
 
-        if st.checkbox("📑 Show Metadata"):
-            meta = st.session_state["metadata"]
-            st.markdown(
-                f"""
-                <div style='background-color:#f0f0f0; padding:10px;'>
-                <b>Type:</b> {meta.get("type")}<br>
-                <b>Method:</b> {meta.get("method")}<br>
-                <b>Matrix:</b> {meta.get("matrix")}<br>
-                <b>Mode:</b> {meta.get("mode")}<br>
-                <b>Time:</b> {meta.get("timestamp")}
-                </div>
-            """,
-                unsafe_allow_html=True,
-            )
+    st.subheader("🎯 Base Composition Summary")
+    base_df = base_composition_summary(st.session_state["sequences"])
+    st.dataframe(base_df)
+    st.download_button(
+        "📥 Download Composition",
+        base_df.to_csv(index=False),
+        file_name="base_composition.csv",
+    )
 
-        file_format = st.selectbox(
-            "📥 Download Format", [".fasta", ".rtf", ".txt", ".clustal", ".nex", ".phy"]
-        )
-        data = st.session_state["aligned"].replace("<br>", "\n")
-        if file_format == ".clustal":
-            data = st.session_state.get("clustal", data)
-        elif file_format == ".rtf":
-            data = f"{{\\rtf1\\ansi\n{data}\n}}"
+    st.subheader("📂 Export Metadata")
+    meta_df = batch_export_metadata(st.session_state["sequences"])
+    st.dataframe(meta_df)
+    st.download_button(
+        "📤 Export Metadata (CSV)",
+        meta_df.to_csv(index=False),
+        file_name="sequence_metadata.csv",
+    )
+
+    fmt = st.selectbox(
+        "\ud83d\udcc5 Download Alignment Format", [".fasta", ".txt", ".clustal", ".nex"]
+    )
+    raw = st.session_state["aligned"].replace("<br>", "\n")
+
+    if fmt == ".clustal":
+        out = st.session_state.get("clustal", raw)
+    elif fmt == ".nex":
+        # Convert aligned sequences into MultipleSeqAlignment object again
+        max_len = max(len(r.seq) for r in st.session_state["sequences"])
+        padded = [
+            SeqRecord(Seq(str(r.seq).ljust(max_len, "-")), id=r.id)
+            for r in st.session_state["sequences"]
+        ]
+        alignment = MultipleSeqAlignment(padded)
+        nexus_io = StringIO()
+        AlignIO.write(alignment, nexus_io, "nexus")
+        out = nexus_io.getvalue()
+    else:
+        out = raw
+
+    session_name = st.text_input("💾 Session Name", "alignment_session")
+    if st.button("💾 Save Session"):
+        json_obj = {
+            "sequences": [s.format("fasta") for s in st.session_state["sequences"]],
+            "result": st.session_state["aligned"],
+            "metadata": st.session_state["metadata"],
+        }
         st.download_button(
-            "📥 Download Alignment", data, file_name=f"alignment{file_format}"
+            "📁 Export Session (.json)",
+            json.dumps(json_obj, indent=2),
+            file_name=f"{session_name}.json",
         )
 
-        session_name = st.text_input("💾 Session Name", value="alignment_session")
-        if st.button("💾 Save Alignment Session"):
-            session = {
-                "sequences": [r.format("fasta") for r in st.session_state["sequences"]],
-                "result": st.session_state["aligned"],
-                "metadata": st.session_state["metadata"],
-            }
-            json_data = json.dumps(session, indent=2)
-            st.download_button(
-                "📁 Download Session (.json)",
-                data=json_data,
-                file_name=f"{session_name}.json",
-            )
-
-# Footer
+# --- Footer ---
 st.markdown("---")
 st.markdown(
     """
 <p style="text-align:center;font-size:14px">
-    Developed by <a href="https://github.com/Behordeun">Behordeun</a> and 
-    <a href="https://github.com/bollergene">Bollergene</a><br>
-    📞 +2348108316393 | © Behordeun 2025
+Developed by <a href="https://github.com/Behordeun">Behordeun</a> & <a href="https://github.com/bollergene">Bollergene</a><br>
+📞 +2348108316393 | © Behordeun 2025
 </p>
 """,
     unsafe_allow_html=True,
