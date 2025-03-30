@@ -83,23 +83,30 @@ if st.session_state["sequence_df"] is not None:
     if st.checkbox("📈 Show Visualizations"):
         visualize_results(df)
 
+    # Unified GC Skew Plot for all sequences
     if st.checkbox("🧪 GC Skew Analysis"):
         window_size = st.slider("Select Window Size", 10, 200, 50, step=10)
+        rows = []
+
         for record in st.session_state["sequences"]:
-            gcs = []
             seq = str(record.seq).upper()
-            for i in range(0, len(seq) - window_size + 1):
-                window = seq[i : i + window_size]
-                g = window.count("G")
-                c = window.count("C")
-                skew = (g - c) / (g + c) if (g + c) > 0 else 0
-                gcs.append({"Position": i, "GC Skew": skew})
-            skew_df = pd.DataFrame(gcs)
-            st.subheader(f"📉 GC Skew for {record.id}")
-            fig = px.line(
-                skew_df, x="Position", y="GC Skew", title=f"GC Skew for {record.id}"
-            )
-            st.plotly_chart(fig)
+            for i in range(len(seq) - window_size + 1):
+                win = seq[i : i + window_size]
+                g, c = win.count("G"), win.count("C")
+                skew = (g - c) / (g + c) if (g + c) else 0
+                rows.append({"Sequence ID": record.id, "Position": i, "GC Skew": skew})
+
+        skew_df = pd.DataFrame(rows)
+        st.subheader("📉 GC Skew")
+        fig = px.line(
+            skew_df,
+            x="Position",
+            y="GC Skew",
+            color="Sequence ID",
+            labels={"GC Skew": "GC Skew Value"},
+            title="GC Skew Across All Sequences",
+        )
+        st.plotly_chart(fig, use_container_width=True)
 
     if st.checkbox("🧬 Motif Scanner"):
         motif = st.text_input("Enter RNA motif (e.g., AUG or UUU)", value="AUG")
