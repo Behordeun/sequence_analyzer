@@ -15,13 +15,19 @@ st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 
 st.title("📞 Contact")
+
 st.markdown(
     """
-For any inquiries or contributions, please reach out:
 
-[Muhammad Abiodun SULAIMAN](https://linkedin.com/in/muhammad-abiodun-sulaiman)
+    ## **👨‍💻 Developers**
+    This application was developed by: Muhammad Abiodun SULAIMAN and Bolaji Fatai OYEYEMI, who are passionate about bioinformatics and data analysis. They aim to provide a user-friendly platform for researchers and students to perform sequence analysis without the need for complex installations or configurations.
+    ## **📧 Contact Information**
+    
+    - **Muhammad Abiodun SULAIMAN: [ResearchGate](https://www.researchgate.net/profile/Muhammad-Sulaiman-19) | [Google Scholar](https://scholar.google.com/citations?user=0EqNhMQAAAAJ&hl=en) | [ORCID](https://orcid.org/0000-0001-9161-2608) | [LinkedIn](https://linkedin.com/in/muhammad_abiodun_sulaiman) | [GitHub](https://github.com/Behordeun) | [Email](mailto:abiodun.msulaiman@gmail.com)**
+    - **Bolaji Fatai OYEYEMI: [ResearchGate](https://www.researchgate.net/profile/Bolaji-Oyeyemi) | [Google Scholar](https://scholar.google.com/citations?user=D0LnYT0AAAAJ&hl=en) | [ORCID](https://orcid.org/0000-0001-5564-6165) | [LinkedIn](https://linkedin.com/in/bolaji-f-oyeyemi-phd-46a93363) | [GitHub](https://github.com/bollergene) | [Email](mailto:bolajioyeyemi@gmail.com)**  
 
-[Bolaji Fatai OYEYEMI](https://www.linkedin.com/in/bolaji-f-oyeyemi-phd-46a93363)
+    📅 Version: **1.1.1**  
+    🔗 [GitHub Repository](https://github.com/Behordeun/sequence_analyzer)
 
 """
 )
