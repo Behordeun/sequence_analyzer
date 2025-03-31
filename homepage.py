@@ -21,6 +21,16 @@ st.markdown(
 ## **About This Application**
 The **Sequence Analyzer Application** is built to help researchers, students, and bioinformaticians perform DNA, RNA, and Phylogenetic sequence analysis with ease, all from a web interface.
 
+
+---
+
+## 🧭 **Getting Started**
+Use the **navigation menu on the left** to:
+1. Perform Sequence Alignment
+2. Access DNA / RNA Analysis
+3. Build Phylogenetic Trees
+4. Learn more from the **"About"** section
+
 ---
 
 ## ✅ **What You Can Do with This Tool**
@@ -36,15 +46,9 @@ The **Sequence Analyzer Application** is built to help researchers, students, an
 2. **Choose** an analysis type (DNA or RNA).
 3. **Select** alignment and tree-building methods.
 4. **Visualize and Download** your results as CSV, RTF, TXT, or Newick files.
-
----
-
-## 🧭 **Getting Started**
-Use the **navigation menu on the left** to:
-1. Perform Sequence Alignment
-2. Access DNA / RNA Analysis
-3. Build Phylogenetic Trees
-4. Learn more from the **"About"** section
+5. **Save** your session for future reference.
+6. **Export** your aligned sequences in various formats including FASTA, CLUSTAL, NEXUS, and PHYLIP.
+7. **Contact** us for any inquiries or contributions.
 
 
 """,
