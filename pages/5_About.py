@@ -51,15 +51,7 @@ The **Sequence Analyzer Application** was developed to provide a user-friendly, 
 - **Cloud storage for saving alignment history.**
 - **Real-time collaboration for bioinformatics teams.**
 
----
 
-## **👨‍💻 Developers**
-This application was developed by:
-- **Muhammad Abiodun SULAIMAN: [ResearchGate](https://www.researchgate.net/profile/Muhammad-Sulaiman-19) | [Google Scholar](https://scholar.google.com/citations?user=0EqNhMQAAAAJ&hl=en) | [ORCID](https://orcid.org/0000-0001-9161-2608) | [LinkedIn](https://linkedin.com/in/muhammad_abiodun_sulaiman) | [GitHub](https://github.com/Behordeun) | [Email](mailto:abiodun.msulaiman@gmail.com)**
-- **Bolaji Fatai OYEYEMI: [ResearchGate](https://www.researchgate.net/profile/Bolaji-Oyeyemi) | [Google Scholar](https://scholar.google.com/citations?user=D0LnYT0AAAAJ&hl=en) | [ORCID](https://orcid.org/0000-0001-5564-6165) | [LinkedIn](https://linkedin.com/in/bolaji-f-oyeyemi-phd-46a93363) | [GitHub](https://github.com/bollergene) | [Email](mailto:bolajioyeyemi@gmail.com)**  
-
-📅 Version: **1.1.0**  
-🔗 [GitHub Repository](https://github.com/Behordeun/sequence_analyzer)
 """
 )
 
