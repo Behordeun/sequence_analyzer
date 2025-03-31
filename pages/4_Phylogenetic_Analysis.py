@@ -6,9 +6,9 @@ import plotly.graph_objects as go
 import plotly.io as pio
 import streamlit as st
 from Bio import Phylo, SeqIO
-from Bio.Seq import Seq
 from Bio.Align import MultipleSeqAlignment
 from Bio.Phylo.TreeConstruction import DistanceCalculator, DistanceTreeConstructor
+from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
 from utils import convert_to_fasta
@@ -86,7 +86,7 @@ if st.session_state["alignment"]:
     df_matrix = pd.DataFrame(
         data=distance_matrix.matrix,
         index=distance_matrix.names,
-        columns=distance_matrix.names
+        columns=distance_matrix.names,
     )
 
     if show_distance_matrix:
