@@ -153,7 +153,7 @@ if st.session_state["alignment"]:
                 y=[-y],
                 mode="markers+text",
                 text=[labels[clade]],
-                textposition="middle right",
+                textposition="top center",
                 marker=dict(color="blue", size=8),
                 hoverinfo="text",
             )
