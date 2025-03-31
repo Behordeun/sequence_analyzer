@@ -41,10 +41,10 @@ The **Sequence Analyzer Application** is built to help researchers, students, an
 
 ## 🧭 **Getting Started**
 Use the **navigation menu on the left** to:
-- Access DNA / RNA Analysis
-- Perform Sequence Alignment
-- Build Phylogenetic Trees
-- Learn more from the **"About"** section
+1. Perform Sequence Alignment
+2. Access DNA / RNA Analysis
+3. Build Phylogenetic Trees
+4. Learn more from the **"About"** section
 
 
 """,
