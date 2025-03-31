@@ -140,21 +140,33 @@ def align_pairwise(sequences, matrix, mode):
         aligner.substitution_matrix = substitution_matrices.load(matrix)
     except:
         st.warning("⚠️ Matrix not loaded")
+
     html_blocks = []
+    total_score = 0
+    total_identity = 0
+    comparisons = 0
+
     for i in range(len(sequences) - 1):
         a, b = sequences[i], sequences[i + 1]
         aln = aligner.align(a.seq, b.seq)[0]
-        identity = (
-            sum(x == y for x, y in zip(str(aln.target), str(aln.query)))
-            / len(aln.target)
-            * 100
-        )
+        sa, sb = str(aln.target), str(aln.query)
+        identity = sum(x == y for x, y in zip(sa, sb)) / len(sa) * 100
+        total_identity += identity
+        total_score += aln.score
+        comparisons += 1
+
         html_blocks.append(
-            f"<b>{a.id} vs {b.id}</b><br><b>Score:</b> {aln.score:.2f}, <b>Identity:</b> {identity:.1f}%<br>"
-            + highlight_alignment(str(aln.target), str(aln.query))
-            + "<br><br>"
+            f"<b>{a.id} vs {b.id}</b><br>"
+            f"<b>Score:</b> {aln.score:.2f}, "
+            f"<b>Identity:</b> {identity:.1f}%<br>"
+            f"{highlight_alignment(sa, sb)}<br><br>"
         )
-    return "".join(html_blocks)
+
+    avg_identity = total_identity / comparisons if comparisons else 0
+    avg_score = total_score / comparisons if comparisons else 0
+
+    summary = f"<b>Average Score:</b> {avg_score:.2f} | <b>Average Identity:</b> {avg_identity:.1f}%<br><hr>"
+    return summary + "".join(html_blocks)
 
 
 def align_msa(sequences):
@@ -164,6 +176,7 @@ def align_msa(sequences):
         if seq_type_choice == "Auto"
         else seq_type_choice.upper()
     )
+
     padded = [
         SeqRecord(
             Seq(str(r.seq).ljust(max_len, "-")),
@@ -172,11 +185,13 @@ def align_msa(sequences):
         )
         for r in sequences
     ]
+
     alignment = MultipleSeqAlignment(padded)
     alignment.annotations["molecule_type"] = mol_type
     AlignIO.write(alignment, "sequences/clustal.aln", "clustal")
     AlignIO.write(alignment, "sequences/nexus.nex", "nexus")
     AlignIO.write(alignment, "sequences/phylip.phy", "phylip")
+
     st.session_state.update(
         {
             "clustal": open("sequences/clustal.aln").read(),
@@ -184,15 +199,24 @@ def align_msa(sequences):
             "phylip": open("sequences/phylip.phy").read(),
         }
     )
+
     seq_matrix = [str(r.seq) for r in padded]
     html_lines = []
+    match_counts, total = 0, 0
+
     for i in range(len(seq_matrix)):
         line = f"<b>{padded[i].id}</b><br>"
         for j, base in enumerate(seq_matrix[i]):
             ref = seq_matrix[0][j]
             css = "match" if base == ref else "mismatch"
+            if base == ref:
+                match_counts += 1
+            total += 1
             line += f"<span class='{css}'>{base}</span>"
         html_lines.append(line + "<br>")
+
+    identity = (match_counts / total * 100) if total else 0
+
     consensus = "".join(
         Counter(col).most_common(1)[0][0] if any(b != "-" for b in col) else "-"
         for col in zip(*seq_matrix)
@@ -205,7 +229,9 @@ def align_msa(sequences):
         )
         for c in consensus
     )
-    return "<br>".join(html_lines + [consensus_html])
+
+    summary = f"<b>MSA Identity:</b> {identity:.2f}%<br><hr>"
+    return summary + "<br>".join(html_lines + [consensus_html])
 
 
 # --- File Input ---
