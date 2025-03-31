@@ -1,6 +1,6 @@
 import json
 import re
-from io import StringIO
+from io import BytesIO, StringIO
 
 import pandas as pd
 import plotly.express as px
@@ -107,6 +107,37 @@ if st.session_state["sequence_df"] is not None:
             title="GC Skew Across All Sequences",
         )
         st.plotly_chart(fig, use_container_width=True)
+
+        # --- Multi-format download ---
+        export_fmt = st.selectbox(
+            "📥 Download GC Skew Plot As", ["PNG", "PDF", "SVG", "JPEG", "HTML"]
+        )
+        buffer = BytesIO()
+
+        if export_fmt == "HTML":
+            html = fig.to_html(full_html=False, include_plotlyjs="cdn")
+            st.download_button(
+                "⬇️ Download HTML",
+                html,
+                file_name="gc_skew.html",
+                mime="text/html",
+            )
+        else:
+            try:
+                fig.write_image(buffer, format=export_fmt.lower())
+                mime = (
+                    "application/pdf"
+                    if export_fmt == "PDF"
+                    else f"image/{export_fmt.lower()}"
+                )
+                st.download_button(
+                    f"⬇️ Download {export_fmt}",
+                    buffer.getvalue(),
+                    file_name=f"gc_skew.{export_fmt.lower()}",
+                    mime=mime,
+                )
+            except Exception as e:
+                st.error(f"Export failed: {e}")
 
     if st.checkbox("🧬 Motif Scanner"):
         motif = st.text_input("Enter RNA motif (e.g., AUG or UUU)", value="AUG")
