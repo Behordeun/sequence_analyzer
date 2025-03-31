@@ -378,13 +378,40 @@ if st.session_state["aligned"]:
 
     if st.session_state["show_gc"]:
         st.subheader("📊 GC Skew")
+
+        # Compute and display
         fig_skew = gc_skew_plot(st.session_state["sequences"])
-        st.plotly_chart(fig_skew)
-        buffer = BytesIO()
-        fig_skew.write_image(buffer, format="png")
-        st.download_button(
-            "⬇️ Download GC Skew Plot (PNG)", buffer.getvalue(), file_name="gc_skew.png"
+        st.plotly_chart(fig_skew, use_container_width=True)
+
+        # Export options
+        export_fmt = st.selectbox(
+            "📥 Download GC Skew Format", ["PNG", "PDF", "SVG", "JPEG", "HTML"]
         )
+
+        buffer = BytesIO()
+        if export_fmt == "HTML":
+            html = fig_skew.to_html(full_html=False, include_plotlyjs="cdn")
+            st.download_button(
+                "⬇️ Download GC Skew (HTML)",
+                html,
+                file_name="gc_skew.html",
+                mime="text/html",
+            )
+        else:
+            try:
+                fig_skew.write_image(buffer, format=export_fmt.lower())
+                st.download_button(
+                    f"⬇️ Download GC Skew ({export_fmt})",
+                    buffer.getvalue(),
+                    file_name=f"gc_skew.{export_fmt.lower()}",
+                    mime=(
+                        f"image/{export_fmt.lower()}"
+                        if export_fmt.lower() != "pdf"
+                        else "application/pdf"
+                    ),
+                )
+            except Exception as e:
+                st.error(f"Export failed: {e}")
 
     if st.session_state["show_base"]:
         st.subheader("🎯 Base Composition")
