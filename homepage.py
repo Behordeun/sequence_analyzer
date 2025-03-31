@@ -19,31 +19,23 @@ st.title("🔬 Sequence Analyzer Application")
 st.markdown(
     """
 ## **About This Application**
-The **Sequence Analyzer Application** is built to help researchers, students, and bioinformaticians perform DNA and RNA sequence analysis with ease — all from a web interface.
+The **Sequence Analyzer Application** is built to help researchers, students, and bioinformaticians perform DNA, RNA, and Phylogenetic sequence analysis with ease, all from a web interface.
 
 ---
 
 ## ✅ **What You Can Do with This Tool**
-- 🔡 **Align Sequences** — Upload one or multiple sequences and choose between Pairwise or Multiple Sequence Alignment.
-- 🔬 **Analyze DNA or RNA** — See nucleotide composition and GC content, with charts.
-- 🔗 **Retrieve Sequences from GenBank** — Just enter accession numbers and fetch data directly.
-- 🌿 **Build Phylogenetic Trees** — Generate evolutionary trees using UPGMA or Neighbor-Joining and download them in Newick format.
+- 🔡 **Align Sequences:** Upload one or multiple sequences and choose between **Pairwise or Multiple Sequence Alignment**.
+- 🔬 **Analyze DNA or RNA:** See nucleotide composition and GC content, with charts.
+- 🔗 **Retrieve Sequences from GenBank:** Just enter accession numbers and fetch data directly.
+- 🌿 **Build Phylogenetic Trees:** Generate evolutionary trees using **UPGMA or Neighbor-Joining** and download them in Newick format.
 
 ---
 
 ## 🧪 **How It Works**
-1. **Upload** sequences in `.fasta`, `.txt`, or `.rtf` format — or input GenBank accession numbers.
+1. **Upload** sequences in **.fasta**, **.txt**, or **.rtf** format, or input GenBank accession numbers.
 2. **Choose** an analysis type (DNA or RNA).
 3. **Select** alignment and tree-building methods.
 4. **Visualize and Download** your results as CSV, RTF, TXT, or Newick files.
-
----
-
-## ⚙️ **Tech Stack**
-- **Streamlit** - For the interactive web UI
-- **Biopython** - For sequence parsing, alignment, and phylogenetics
-- **Plotly & Matplotlib** - For visualizations
-- **Python** - The underlying language powering all logic
 
 ---
 
@@ -52,9 +44,9 @@ Use the **navigation menu on the left** to:
 - Access DNA / RNA Analysis
 - Perform Sequence Alignment
 - Build Phylogenetic Trees
-- Learn more from the "About" section
+- Learn more from the **"About"** section
 
----
+
 """,
     unsafe_allow_html=True,
 )
