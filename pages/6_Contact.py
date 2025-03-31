@@ -18,8 +18,11 @@ st.title("📞 Contact")
 st.markdown(
     """
 For any inquiries or contributions, please reach out:
-- 📧 Email: **[Muhammad Abiodun SULAIMAN](mailto:abiodun.msulaiman@gmail.com), [Bolaji Fatai OYEYEMI](mailto:bolajioyeyemi@gmail.com)**
-- 🛠 GitHub: **[Sequence Analyzer](https://github.com/Behordeun/sequence_analyzer)**
+
+[Muhammad Abiodun SULAIMAN](https://linkedin.com/in/muhammad-abiodun-sulaiman)
+
+[Bolaji Fatai OYEYEMI](https://www.linkedin.com/in/bolaji-f-oyeyemi-phd-46a93363)
+
 """
 )
 
