@@ -113,7 +113,7 @@ if enable_metadata:
 # --- Upload and Build Tree ---
 if uploaded_file:
     content = convert_to_fasta(uploaded_file)
-    sequences = list(SeqIO.parse(StringIO(content), "fasta"))
+    sequences = list(SeqIO.parse(StringIO(content), "fasta-blast"))
     st.success(f"✅ {len(sequences)} sequences uploaded")
 
     if st.checkbox("👁 Preview Sequences"):
