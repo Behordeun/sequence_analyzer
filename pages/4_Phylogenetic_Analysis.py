@@ -124,9 +124,20 @@ if uploaded_file:
     if st.button("🧬 Build Tree"):
         max_len = max(len(s.seq) for s in sequences)
         padded = [Seq(str(s.seq).ljust(max_len, "-")) for s in sequences]
-        aligned = MultipleSeqAlignment(
-            [SeqRecord(seq, id=s.id) for seq, s in zip(padded, sequences)]
-        )
+        # Ensure unique IDs by appending suffixes to duplicates
+        seen_ids = {}
+        unique_sequences = []
+        for seq, record in zip(padded, sequences):
+            original_id = record.id
+            if original_id in seen_ids:
+                seen_ids[original_id] += 1
+                unique_id = f"{original_id}_{seen_ids[original_id]}"
+            else:
+                seen_ids[original_id] = 1
+                unique_id = original_id
+            unique_sequences.append(SeqRecord(seq, id=unique_id))
+
+        aligned = MultipleSeqAlignment(unique_sequences)
         calculator = DistanceCalculator("identity")
         dm = calculator.get_distance(aligned)
         constructor = DistanceTreeConstructor()
