@@ -7,4 +7,6 @@ bio
 matplotlib
 kaleido
 scikit-bio
+scikit-learn
 python-docx
+reportlab
