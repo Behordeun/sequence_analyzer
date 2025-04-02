@@ -45,35 +45,49 @@ global layout_style
 
 # --- Tree Construction Section ---
 if uploaded_file:
-    method = st.selectbox("🌳 Tree Method", ["Neighbor Joining", "UPGMA"], key="tree_method")
-    layout_style = st.selectbox("🎨 Layout", ["rectangular", "radial", "circular"], key="layout_style")
-    run_tree = st.button("🧬 Build Tree")
+        if "tree_method" not in st.session_state:
+            st.session_state.tree_method = "Neighbor Joining"
 
-    if run_tree:
-        max_len = max(len(s.seq) for s in sequences)
-        seen_ids = {}
-        padded = []
-        for s in sequences:
-            sid = s.id
-            if sid in seen_ids:
-                seen_ids[sid] += 1
-                sid = f"{sid}_{seen_ids[sid]}"
-            else:
-                seen_ids[sid] = 1
-            padded.append(SeqRecord(Seq(str(s.seq).ljust(max_len, "-")), id=sid))
+        if "layout_style" not in st.session_state:
+            st.session_state.layout_style = "rectangular"
 
-        alignment = MultipleSeqAlignment(padded)
-        calculator = DistanceCalculator("identity")
-        dm = calculator.get_distance(alignment)
-        constructor = DistanceTreeConstructor()
-        tree = (
-            constructor.nj(dm)
-            if method == "Neighbor Joining"
-            else constructor.upgma(dm)
+        st.session_state.tree_method = st.selectbox(
+            "🌳 Tree Method", ["Neighbor Joining", "UPGMA"], key="select_tree_method"
         )
 
-        st.session_state["alignment"] = alignment
-        st.session_state["tree"] = tree
+        st.session_state.layout_style = st.selectbox(
+            "🎨 Layout", ["rectangular", "radial", "circular"], key="select_layout_style"
+        )
+        run_tree = st.button("🧬 Build Tree")
+
+        method = st.session_state.tree_method
+        layout_style = st.session_state.layout_style
+        
+        if run_tree:
+            max_len = max(len(s.seq) for s in sequences)
+            seen_ids = {}
+            padded = []
+            for s in sequences:
+                sid = s.id
+                if sid in seen_ids:
+                    seen_ids[sid] += 1
+                    sid = f"{sid}_{seen_ids[sid]}"
+                else:
+                    seen_ids[sid] = 1
+                padded.append(SeqRecord(Seq(str(s.seq).ljust(max_len, "-")), id=sid))
+    
+            alignment = MultipleSeqAlignment(padded)
+            calculator = DistanceCalculator("identity")
+            dm = calculator.get_distance(alignment)
+            constructor = DistanceTreeConstructor()
+            tree = (
+                constructor.nj(dm)
+                if method == "Neighbor Joining"
+                else constructor.upgma(dm)
+            )
+    
+            st.session_state["alignment"] = alignment
+            st.session_state["tree"] = tree
 
 
 if st.session_state.tree:
@@ -307,6 +321,8 @@ if st.session_state.tree:
             recurse(tree.root)
             return coords
 
+        layout_style = st.session_state.layout_style
+        
         coords = layout_coords(st.session_state.tree, layout_style)
         fig = go.Figure()
 
@@ -325,23 +341,41 @@ if st.session_state.tree:
                     )
 
         for clade, (x, y) in coords.items():
-            # Ensure annotations is a dict
             annotations = st.session_state.get("annotations") or {}
             label = annotations.get(clade.name, clade.name or "")
             tooltip = []
 
-            if show_branch_lengths and clade.branch_length:
-                tooltip.append(f"Branch: {clade.branch_length:.2f}")
-            if show_support and getattr(clade, "confidence", None):
-                tooltip.append(f"Support: {clade.confidence:.1f}%")
+            # ✅ Add sequence name
+            name = clade.name or "Unnamed"
+            tooltip.append(f"🧬 Sequence: {name}")
 
-            color = "blue"
+            # ✅ Add taxonomy group from metadata if available
+            if clade.name in metadata:
+                tooltip.append(f"🧪 Group: {metadata[clade.name]}")
+
+            # ✅ Add branch length
+            if show_branch_lengths and clade.branch_length:
+                tooltip.append(f"📏 Branch: {clade.branch_length:.2f}")
+
+            # ✅ Add bootstrap support if available
+            if show_support and getattr(clade, "confidence", None):
+                tooltip.append(f"📊 Support: {clade.confidence:.1f}%")
+
+            # ✅ Add entropy if enabled
             if show_entropy and st.session_state.entropy_map:
-                e = st.session_state.entropy_map.get(clade, 0)
-                color = f"rgba({int(e*50)},0,255,0.9)"
+                entropy = st.session_state.entropy_map.get(clade, 0)
+                tooltip.append(f"🔥 Entropy: {entropy:.3f}")
+            else:
+                entropy = 0
+
+            # Color encoding
+            color = "blue"
+            if show_entropy:
+                color = f"rgba({int(entropy*50)},0,255,0.9)"
             if clade.name in metadata:
                 color = f"hsl({hash(metadata[clade.name]) % 360}, 70%, 60%)"
 
+            # ✅ Click-to-focus via custom hovertemplate and selection highlighting
             fig.add_trace(
                 go.Scatter(
                     x=[x],
@@ -349,9 +383,10 @@ if st.session_state.tree:
                     mode="markers+text" if show_labels else "markers",
                     text=[label],
                     marker=dict(size=8, color=color),
-                    hovertext=" | ".join(tooltip),
+                    hovertext="<br>".join(tooltip),
                     hoverinfo="text",
                     textposition="top center",
+                    customdata=[clade.name],  # Used for future interactive selections
                 )
             )
 
@@ -384,7 +419,7 @@ if st.session_state.tree:
             buf = StringIO()
             Phylo.write(st.session_state.tree, buf, "newick")
             st.download_button(
-                "⬇️ Download Tree (Newick)", buf.getvalue(), file_name="tree.nwk"
+                "⬇️ Download Tree (Newick)", buf.getvalue(), file_name="phylogenetic_tree.nwk"
             )
         elif export_fmt == "JSON":
             data = {
@@ -392,11 +427,11 @@ if st.session_state.tree:
                 "annotations": st.session_state.annotations,
             }
             st.download_button(
-                "⬇️ Download JSON", json.dumps(data, indent=2), file_name="tree.json"
+                "⬇️ Download JSON", json.dumps(data, indent=2), file_name="phylogenetic_tree.json"
             )
         elif export_fmt == "HTML":
             html = pio.to_html(fig)
-            st.download_button("⬇️ Download HTML", html, file_name="tree.html")
+            st.download_button("⬇️ Download HTML", html, file_name="phylogenetic_tree.html")
         else:
             img = pio.to_image(fig, format=export_fmt.lower())
             b64 = base64.b64encode(img).decode()
@@ -406,9 +441,65 @@ if st.session_state.tree:
                 else f"image/{export_fmt.lower()}"
             )
             st.markdown(
-                f'<a href="data:{mime};base64,{b64}" download="tree.{export_fmt.lower()}">📥 Download Tree</a>',
+                f'<a href="data:{mime};base64,{b64}" download="phylogenetic_tree.{export_fmt.lower()}">📥 Download Tree</a>',
                 unsafe_allow_html=True,
             )
+
+        # --- Tree Comparison Rendering ---
+        if compare_tree:
+            st.subheader("🧪 Tree Comparison")
+
+            # Load comparison tree
+            compare_str = compare_tree.read().decode("utf-8")
+            try:
+                from Bio import Phylo
+                from io import StringIO
+
+                comp_tree = Phylo.read(StringIO(compare_str), "newick")
+                st.success("✅ Comparison tree loaded")
+
+                def render_tree(tree_obj, title):
+                    coords = {}
+                    def recurse(clade, x=0, y=0):
+                        coords[clade] = (x, y)
+                        for i, child in enumerate(clade.clades):
+                            dx = child.branch_length or 0.1
+                            dy = (i - len(clade.clades) / 2) * 2
+                            recurse(child, x + dx, y + dy)
+
+                    recurse(tree_obj.root)
+                    fig = go.Figure()
+                    for p in coords:
+                        for c in p.clades:
+                            if c in coords:
+                                x0, y0 = coords[p]
+                                x1, y1 = coords[c]
+                                fig.add_trace(go.Scatter(
+                                    x=[x0, x1], y=[y0, y1], mode="lines",
+                                    line=dict(color="lightgray")))
+
+                    for clade, (x, y) in coords.items():
+                        name = clade.name or ""
+                        fig.add_trace(go.Scatter(
+                            x=[x], y=[y], mode="markers+text",
+                            text=[name], marker=dict(size=6, color="green"),
+                            textposition="top center"))
+
+                    fig.update_layout(
+                        title=title, height=600,
+                        xaxis=dict(visible=False),
+                        yaxis=dict(visible=False)
+                    )
+                    return fig
+
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.plotly_chart(render_tree(st.session_state.tree, "🔬 Your Tree"))
+                with col2:
+                    st.plotly_chart(render_tree(comp_tree, "🧪 Comparison Tree"))
+
+            except Exception as e:
+                st.error(f"❌ Error parsing comparison tree: {e}")
 
         # --- PDF Report ---
         if st.button("📄 Generate PDF Report"):
