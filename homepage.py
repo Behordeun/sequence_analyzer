@@ -56,28 +56,28 @@ Use the **navigation menu on the left** to:
 )
 
 # Footer
-st.markdown("---")
+st.markdown("---")  # Divider
 st.markdown(
     """
-<p style="color: black; text-align: center; font-size: 15px;">
-    Developed by 
-    <a href="https://github.com/Behordeun" target="_blank" style="color: blue; text-decoration: none;">Behordeun</a> 
-    and 
-    <a href="https://github.com/bollergene" target="_blank" style="color: blue; text-decoration: none;">Bollergene</a>.
-</p>
+    <p style="color: white; text-align: center; font-size: 15px;">
+        Developed by 
+        <a href="https://github.com/Behordeun" target="_blank" style="color: blue; text-decoration: none;">Behordeun</a> 
+        and 
+        <a href="https://github.com/bollergene" target="_blank" style="color: blue; text-decoration: none;">Bollergene</a>.
+    </p>
 """,
     unsafe_allow_html=True,
 )
 
 st.markdown(
-    """<p style="color:black; text-align:center;font-size:15px;">
-📞 +2348108316393
+    """<p style="color:white; text-align:center;font-size:15px;">
+📞+2348108316393
 """,
     unsafe_allow_html=True,
 )
 
 st.markdown(
-    """<p style="color:black; text-align:center;font-size:15px;">
+    """<p style="color:whilte; text-align:center;font-size:15px;">
 Copyright | Behordeun 2025(c)
 """,
     unsafe_allow_html=True,
