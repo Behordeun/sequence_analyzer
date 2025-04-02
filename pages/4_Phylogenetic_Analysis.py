@@ -28,7 +28,7 @@ for key in ["alignment", "tree", "entropy_map", "annotations", "cluster_groups"]
 
 # --- Uploads ---
 uploaded_file = st.file_uploader(
-    "📥 Upload DNA Sequences", type=["fasta", "txt", "rtf", "phy", "nex"]
+    "📥 Upload Sequence Files", type=["fasta", "txt", "rtf", "phy", "nex"]
 )
 
 if uploaded_file:
