@@ -26,7 +26,7 @@ st.markdown(
     - **Muhammad Abiodun SULAIMAN: [ResearchGate](https://www.researchgate.net/profile/Muhammad-Sulaiman-19) | [Google Scholar](https://scholar.google.com/citations?user=0EqNhMQAAAAJ&hl=en) | [ORCID](https://orcid.org/0000-0001-9161-2608) | [GitHub](https://github.com/Behordeun) | [Email](mailto:abiodun.msulaiman@gmail.com)**
     - **Bolaji Fatai OYEYEMI: [ResearchGate](https://www.researchgate.net/profile/Bolaji-Oyeyemi) | [Google Scholar](https://scholar.google.com/citations?user=D0LnYT0AAAAJ&hl=en) | [ORCID](https://orcid.org/0000-0001-5564-6165) | [GitHub](https://github.com/bollergene) | [Email](mailto:bolajioyeyemi@gmail.com)**  
 
-    📅 Version: **1.1.1**  
+    📅 Version: **1.1.2**  
     🔗 [GitHub Repository](https://github.com/Behordeun/sequence_analyzer)
 
 """
@@ -37,7 +37,7 @@ st.markdown(
 st.markdown("---")  # Divider
 st.markdown(
     """
-    <p style="color: black; text-align: center; font-size: 15px;">
+    <p style="color: white; text-align: center; font-size: 15px;">
         Developed by 
         <a href="https://github.com/Behordeun" target="_blank" style="color: blue; text-decoration: none;">Behordeun</a> 
         and 
@@ -48,14 +48,14 @@ st.markdown(
 )
 
 st.markdown(
-    """<p style="color:black; text-align:center;font-size:15px;">
+    """<p style="color:white; text-align:center;font-size:15px;">
 📞+2348108316393
 """,
     unsafe_allow_html=True,
 )
 
 st.markdown(
-    """<p style="color:black; text-align:center;font-size:15px;">
+    """<p style="color:whilte; text-align:center;font-size:15px;">
 Copyright | Behordeun 2025(c)
 """,
     unsafe_allow_html=True,
