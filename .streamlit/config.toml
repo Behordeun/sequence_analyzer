@@ -1,28 +1,34 @@
 [theme]
-# Primary color for buttons and highlights, using a vibrant Genomic Green
-primaryColor = "#4CAF50"
+# Genomic green for vibrance & branding
+primaryColor = "#2E7D32"
 
-# Background color for the main interface, providing a clean and modern look
-backgroundColor = "#F8F9FA"
+# Light background for clarity
+backgroundColor ="#1E1E1E"
 
-# Secondary background color for contrast, using a sophisticated Dark Blue-Grey
-secondaryBackgroundColor = "#34495E"
+# Secondary background for sidebar & menus
+secondaryBackgroundColor = "#2C3E50"
 
-# Text color for readability, ensuring clarity on both light and dark backgrounds
-textColor = "#000000"
+# High-contrast text for readability
+textColor = "#EAEAEA"
 
-# Font choice for a modern and professional appearance
+# Consistent modern font
 font = "sans serif"
 
+# Optional: Set spacing & rounding via global CSS if needed
+# You can also inject custom fonts or styles via markdown in main app
+
 [server]
-# Default port for the Streamlit server
+# Run Streamlit on port 8501
 port = 8501
 
-# Enable CORS for cross-origin requests, useful for API integrations
+# Cross-Origin access (True if deploying externally)
 enableCORS = true
 
-# Set the maximum upload size to accommodate large sequence files
+# Upload size limit (MB)
 maxUploadSize = 200
 
-# Configure the server to run in headless mode for deployment
+# Deployment-ready: no browser popup
 headless = true
+
+# Optional: Improve dev performance
+enableXsrfProtection = false
