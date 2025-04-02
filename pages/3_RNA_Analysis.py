@@ -66,6 +66,7 @@ if st.session_state["sequences"] and st.checkbox("👁️ Preview Sequences"):
     st.subheader("📄 Uploaded Sequences")
     for record in st.session_state["sequences"]:
         st.write(f"🔹 {record.id} - {len(record.seq)} bp")
+        st.code(str(record.seq), language="text")
 
 if st.session_state["sequences"]:
     if st.button("🔬 Analyze"):
@@ -192,14 +193,30 @@ if st.session_state["sequence_df"] is not None:
             file_name=f"{session_name}.json",
         )
 
-st.markdown("---")
+# Footer
+st.markdown("---")  # Divider
 st.markdown(
     """
-<p style="text-align:center;font-size:14px">
-    Developed by <a href="https://github.com/Behordeun">Behordeun</a> and 
-    <a href="https://github.com/bollergene">Bollergene</a><br>
-    📞 +2348108316393 | © Behordeun 2025
-</p>
+    <p style="color: white; text-align: center; font-size: 15px;">
+        Developed by 
+        <a href="https://github.com/Behordeun" target="_blank" style="color: blue; text-decoration: none;">Behordeun</a> 
+        and 
+        <a href="https://github.com/bollergene" target="_blank" style="color: blue; text-decoration: none;">Bollergene</a>.
+    </p>
+""",
+    unsafe_allow_html=True,
+)
+
+st.markdown(
+    """<p style="color:white; text-align:center;font-size:15px;">
+📞+2348108316393
+""",
+    unsafe_allow_html=True,
+)
+
+st.markdown(
+    """<p style="color:white; text-align:center;font-size:15px;">
+Copyright | Behordeun 2025(c)
 """,
     unsafe_allow_html=True,
 )
