@@ -20,7 +20,7 @@ from reportlab.pdfgen import canvas
 from utils import convert_to_fasta
 
 st.set_page_config(layout="wide")
-st.title("🌿 Phylogenetic Analysis Platform")
+st.title("🌿 Phylogenetic Analysis")
 
 # --- Initialize State ---
 for key in ["alignment", "tree", "entropy_map", "annotations", "cluster_groups"]:
