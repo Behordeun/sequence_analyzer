@@ -1,0 +1,12 @@
+streamlit
+biopython
+plotly
+pandas
+watchdog
+bio
+matplotlib
+kaleido
+scikit-bio
+scikit-learn
+python-docx
+reportlab
