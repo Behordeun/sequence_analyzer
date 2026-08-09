@@ -35,7 +35,6 @@ h1, h2, h3, h4, h5, h6 {
     border-radius: 5px;
     overflow: hidden;
 }
-footer {visibility: hidden;}
 ::-webkit-scrollbar {width: 8px;}
 ::-webkit-scrollbar-track {background: #f1f1f1;}
 ::-webkit-scrollbar-thumb {background: #888; border-radius: 10px;}

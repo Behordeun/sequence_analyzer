@@ -120,10 +120,12 @@ def _cmd_analyze(args: argparse.Namespace) -> None:
 
     valid = _load_valid_sequences(Path(args.input), seq_type=args.type)
 
-    # Derive is_rna from the actual validated sequences when type is "auto"
+    # Derive is_rna from all validated sequences via majority vote
     if args.type == "auto":
-        detected = detect_sequence_type(str(valid[0].seq))
-        is_rna = detected == "RNA"
+        rna_count = sum(
+            1 for r in valid if detect_sequence_type(str(r.seq)) == "RNA"
+        )
+        is_rna = rna_count > len(valid) // 2
     else:
         is_rna = args.type == "RNA"
 
