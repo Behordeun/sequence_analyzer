@@ -101,8 +101,8 @@ def compute_base_composition(sequences: list[SeqRecord]) -> pd.DataFrame:
 
     rows: list[dict[str, object]] = []
     for record in sequences:
-        seq = record.seq
-        length = len(seq)
+        seq_str = str(record.seq).upper()
+        length = len(seq_str)
 
         if length == 0:
             raise ValueError(f"Sequence '{record.id}' has zero length.")
@@ -111,11 +111,11 @@ def compute_base_composition(sequences: list[SeqRecord]) -> pd.DataFrame:
             {
                 "ID": record.id,
                 "Length": length,
-                "A%": seq.count("A") / length * 100,
-                "T%": seq.count("T") / length * 100,
-                "G%": seq.count("G") / length * 100,
-                "C%": seq.count("C") / length * 100,
-                "GC%": (seq.count("G") + seq.count("C")) / length * 100,
+                "A%": seq_str.count("A") / length * 100,
+                "T%": seq_str.count("T") / length * 100,
+                "G%": seq_str.count("G") / length * 100,
+                "C%": seq_str.count("C") / length * 100,
+                "GC%": (seq_str.count("G") + seq_str.count("C")) / length * 100,
             }
         )
 

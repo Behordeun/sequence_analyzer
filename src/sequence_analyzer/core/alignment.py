@@ -14,6 +14,33 @@ from sequence_analyzer.core.validation import detect_sequence_type
 from sequence_analyzer.models.sequences import AlignmentPair, AlignmentResult
 
 
+def _pad_sequences(sequences: list[SeqRecord], mol_type: str) -> list[SeqRecord]:
+    """Pad sequences to equal length with gap characters."""
+    max_len = max(len(r.seq) for r in sequences)
+    return [
+        SeqRecord(
+            Seq(str(r.seq).ljust(max_len, "-")),
+            id=r.id,
+            name=r.id or "",
+            description="",
+            annotations={"molecule_type": mol_type},
+        )
+        for r in sequences
+    ]
+
+
+def _write_alignment_formats(alignment: MultipleSeqAlignment) -> dict[str, str]:
+    """Serialize an alignment to multiple output formats."""
+    from Bio import AlignIO
+
+    format_exports: dict[str, str] = {}
+    for fmt in ("clustal", "nexus", "phylip", "fasta"):
+        buf = StringIO()
+        AlignIO.write(alignment, buf, fmt)
+        format_exports[fmt] = buf.getvalue()
+    return format_exports
+
+
 def align_pairwise(
     sequences: list[SeqRecord],
     matrix: str = "NUC.4.4",
@@ -27,19 +54,22 @@ def align_pairwise(
     Args:
         sequences: At least 2 SeqRecords.
         matrix: Substitution matrix name (e.g., "NUC.4.4", "BLOSUM62").
-        mode: Alignment mode — "global", "local", or "semi-global".
+        mode: Alignment mode — "global" or "local".
 
     Returns:
         AlignmentResult with pairs, avg_score, and avg_identity.
 
     Raises:
-        ValueError: If fewer than 2 sequences provided or matrix cannot be loaded.
+        ValueError: If fewer than 2 sequences, unsupported mode, or matrix cannot be loaded.
     """
     if len(sequences) < 2:
         raise ValueError("At least 2 sequences are required for pairwise alignment.")
 
+    if mode not in {"global", "local"}:
+        raise ValueError(f"Unsupported alignment mode: '{mode}'. Must be 'global' or 'local'.")
+
     aligner = PairwiseAligner()
-    aligner.mode = mode if mode != "semi-global" else "global"
+    aligner.mode = mode
 
     try:
         aligner.substitution_matrix = substitution_matrices.load(matrix)
@@ -56,13 +86,13 @@ def align_pairwise(
         aligned_a = str(aln.target)
         aligned_b = str(aln.query)
 
-        length = max(len(aligned_a), 1)
+        length = len(aligned_a)
         identity = sum(x == y for x, y in zip(aligned_a, aligned_b, strict=False)) / length * 100
 
         pairs.append(
             AlignmentPair(
-                seq_a_id=a.id or '',
-                seq_b_id=b.id or '',
+                seq_a_id=a.id or "",
+                seq_b_id=b.id or "",
                 aligned_a=aligned_a,
                 aligned_b=aligned_b,
                 score=float(aln.score),
@@ -88,7 +118,7 @@ def align_msa(
     """Perform multiple sequence alignment by padding sequences to max length.
 
     Pads shorter sequences with gap characters to produce a simple MSA.
-    Generates format exports (CLUSTAL, NEXUS, PHYLIP) as strings.
+    Generates format exports (CLUSTAL, NEXUS, PHYLIP, FASTA) as strings.
 
     Args:
         sequences: At least 2 SeqRecords.
@@ -103,39 +133,15 @@ def align_msa(
     if len(sequences) < 2:
         raise ValueError("At least 2 sequences are required for MSA.")
 
-    max_len = max(len(r.seq) for r in sequences)
-
     mol_type = detect_sequence_type(str(sequences[0].seq)) if seq_type == "auto" else seq_type
-
-    padded = [
-        SeqRecord(
-            Seq(str(r.seq).ljust(max_len, "-")),
-            id=r.id,
-            name=r.id or '',
-            description="",
-            annotations={"molecule_type": mol_type},
-        )
-        for r in sequences
-    ]
+    padded = _pad_sequences(sequences, mol_type)
 
     alignment = MultipleSeqAlignment(padded)
     alignment.annotations["molecule_type"] = mol_type
 
-    # Generate format exports
-    from Bio import AlignIO
+    format_exports = _write_alignment_formats(alignment)
 
-    format_exports: dict[str, str] = {}
-    for fmt in ("clustal", "nexus", "phylip"):
-        buf = StringIO()
-        AlignIO.write(alignment, buf, fmt)
-        format_exports[fmt] = buf.getvalue()
-
-    # Also produce FASTA
-    fasta_buf = StringIO()
-    AlignIO.write(alignment, fasta_buf, "fasta")
-    format_exports["fasta"] = fasta_buf.getvalue()
-
-    # Compute identity against the first sequence as reference
+    # Column-wise identity against first sequence as reference
     seq_matrix = [str(r.seq) for r in padded]
     match_count = 0
     total = 0
@@ -149,9 +155,11 @@ def align_msa(
 
     identity = (match_count / total * 100) if total else 0.0
 
-    # Compute consensus
+    # Compute consensus (exclude gaps so actual bases win over gap characters)
     consensus = "".join(
-        Counter(col).most_common(1)[0][0] if any(b != "-" for b in col) else "-"
+        Counter(b for b in col if b != "-").most_common(1)[0][0]
+        if any(b != "-" for b in col)
+        else "-"
         for col in zip(*seq_matrix, strict=False)
     )
     format_exports["consensus"] = consensus

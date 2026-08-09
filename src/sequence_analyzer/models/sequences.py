@@ -1,6 +1,14 @@
 """Typed result containers for sequence analysis operations."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from Bio.Align import MultipleSeqAlignment
+    from Bio.Phylo.BaseTree import Tree
+    from Bio.Phylo.TreeConstruction import DistanceMatrix
 
 
 @dataclass
@@ -29,9 +37,9 @@ class AlignmentResult:
 class PhylogeneticResult:
     """Result container for phylogenetic analysis."""
 
-    tree: object = None  # Bio.Phylo tree object
-    distance_matrix: object = None  # DistanceMatrix object
-    alignment: object = None  # MultipleSeqAlignment object
+    tree: Tree | None = None
+    distance_matrix: DistanceMatrix | None = None
+    alignment: MultipleSeqAlignment | None = None
     newick: str = ""
 
 

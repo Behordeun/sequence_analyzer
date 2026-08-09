@@ -9,13 +9,6 @@ from io import StringIO
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 
-# Format signatures for auto-detection
-_FORMAT_HINTS: dict[str, list[str]] = {
-    "fasta": [">"],
-    "nexus": ["#NEXUS", "#nexus"],
-    "phylip": [],  # Fallback; detected by elimination
-}
-
 
 def _detect_format(content: str) -> str:
     """Guess file format from content header."""

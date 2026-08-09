@@ -4,11 +4,11 @@ Handles distance matrix calculation, tree building via Neighbor Joining or UPGMA
 bootstrap support estimation, and Shannon entropy per clade.
 """
 
-import random
+import math
+import secrets
 from collections import Counter
 from io import StringIO
 
-import numpy as np
 from Bio import Phylo
 from Bio.Align import MultipleSeqAlignment
 from Bio.Phylo.BaseTree import Tree
@@ -17,6 +17,71 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
 from sequence_analyzer.models.sequences import PhylogeneticResult
+
+CladeKey = frozenset[str]
+
+
+def _pad_and_deduplicate(sequences: list[SeqRecord]) -> MultipleSeqAlignment:
+    """Pad sequences to equal length and deduplicate IDs."""
+    max_len = max(len(s.seq) for s in sequences)
+
+    seen: dict[str, int] = {}
+    padded: list[SeqRecord] = []
+    for s in sequences:
+        sid = s.id or "unnamed"
+        if sid in seen:
+            seen[sid] += 1
+            sid = f"{sid}_{seen[sid]}"
+        else:
+            seen[sid] = 1
+        padded.append(SeqRecord(Seq(str(s.seq).ljust(max_len, "-")), id=sid))
+
+    return MultipleSeqAlignment(padded)
+
+
+def _build_tree_from_alignment(
+    alignment: MultipleSeqAlignment,
+    method_lower: str,
+) -> Tree:
+    """Build a tree from a MultipleSeqAlignment using the specified method."""
+    dm = DistanceCalculator("identity").get_distance(alignment)
+    constructor = DistanceTreeConstructor()
+    return constructor.nj(dm) if method_lower == "nj" else constructor.upgma(dm)
+
+
+def _resample_alignment(alignment: MultipleSeqAlignment) -> MultipleSeqAlignment:
+    """Resample alignment columns with replacement for bootstrapping."""
+    col_count = len(alignment[0])
+    idx = [secrets.randbelow(col_count) for _ in range(col_count)]
+    boot_records = [
+        SeqRecord(Seq("".join(str(r.seq)[i] for i in idx)), id=r.id)
+        for r in alignment
+    ]
+    return MultipleSeqAlignment(boot_records)
+
+
+def _collect_clade_tip_sets(tree: Tree) -> list[CladeKey]:
+    """Collect frozensets of terminal names for each non-trivial clade."""
+    clades: list[CladeKey] = []
+    for clade in tree.find_clades():
+        tips = frozenset(x.name for x in clade.get_terminals())
+        if len(tips) > 1:
+            clades.append(tips)
+    return clades
+
+
+def _shannon_entropy(counts: list[int]) -> float:
+    """Compute Shannon entropy from a list of frequency counts."""
+    total = sum(counts)
+    if total == 0:
+        return 0.0
+    entropy = 0.0
+    for c in counts:
+        if c == 0:
+            continue
+        p = c / total
+        entropy -= p * math.log2(p)
+    return entropy
 
 
 def build_tree(
@@ -45,28 +110,13 @@ def build_tree(
     if method_lower not in ("nj", "upgma"):
         raise ValueError(f"Method must be 'nj' or 'upgma', got '{method}'.")
 
-    max_len = max(len(s.seq) for s in sequences)
-
-    # Deduplicate IDs
-    seen: dict[str, int] = {}
-    padded: list[SeqRecord] = []
-    for s in sequences:
-        sid = s.id
-        if sid in seen:
-            seen[sid] += 1
-            sid = f"{sid}_{seen[sid]}"
-        else:
-            seen[sid] = 1
-        padded.append(SeqRecord(Seq(str(s.seq).ljust(max_len, "-")), id=sid))
-
-    alignment = MultipleSeqAlignment(padded)
+    alignment = _pad_and_deduplicate(sequences)
     calculator = DistanceCalculator("identity")
     dm = calculator.get_distance(alignment)
 
     constructor = DistanceTreeConstructor()
     tree = constructor.nj(dm) if method_lower == "nj" else constructor.upgma(dm)
 
-    # Serialize to newick
     newick_buf = StringIO()
     Phylo.write(tree, newick_buf, "newick")  # type: ignore[attr-defined]
     newick_str = newick_buf.getvalue().strip()
@@ -83,7 +133,7 @@ def bootstrap_tree(
     alignment: MultipleSeqAlignment,
     method: str = "nj",
     replicates: int = 50,
-) -> dict[frozenset[str], float]:
+) -> dict[CladeKey, float]:
     """Run bootstrap analysis on an alignment.
 
     Resamples alignment columns with replacement, builds a tree from each
@@ -99,8 +149,11 @@ def bootstrap_tree(
         Dict mapping frozenset of terminal names to support percentage (0-100).
 
     Raises:
-        ValueError: If replicates < 10 or method is invalid.
+        ValueError: If alignment is empty, replicates < 10, or method is invalid.
     """
+    if not alignment:
+        raise ValueError("Alignment is empty; cannot perform bootstrapping.")
+
     if replicates < 10:
         raise ValueError(f"Replicates must be >= 10, got {replicates}.")
 
@@ -108,27 +161,15 @@ def bootstrap_tree(
     if method_lower not in ("nj", "upgma"):
         raise ValueError(f"Method must be 'nj' or 'upgma', got '{method}'.")
 
-    aln_len = len(alignment[0])
-    support: Counter[frozenset[str]] = Counter()
+    support: Counter[CladeKey] = Counter()
 
     for _ in range(replicates):
-        # Resample columns with replacement
-        idx = [random.randint(0, aln_len - 1) for _ in range(aln_len)]
-        boot_records = [
-            SeqRecord(Seq("".join(str(r.seq)[i] for i in idx)), id=r.id) for r in alignment
-        ]
-        boot_aln = MultipleSeqAlignment(boot_records)
+        boot_aln = _resample_alignment(alignment)
+        boot_tree = _build_tree_from_alignment(boot_aln, method_lower)
 
-        dm = DistanceCalculator("identity").get_distance(boot_aln)
-        constructor = DistanceTreeConstructor()
-        boot_tree = constructor.nj(dm) if method_lower == "nj" else constructor.upgma(dm)
+        for tips in _collect_clade_tip_sets(boot_tree):
+            support[tips] += 1
 
-        for clade in boot_tree.find_clades():
-            tips = frozenset(x.name for x in clade.get_terminals())
-            if len(tips) > 1:
-                support[tips] += 1
-
-    # Normalize to percentages
     return {tips: (count / replicates * 100) for tips, count in support.items()}
 
 
@@ -152,10 +193,8 @@ def compute_entropy(tree: Tree) -> dict[str, float]:
             entropy_map[name] = 0.0
         else:
             tips = [x.name for x in clade.get_terminals()]
-            freq = np.array(list(Counter(tips).values()), dtype=float)
-            freq = freq / freq.sum()
-            # Shannon entropy: -sum(p * log2(p))
-            entropy = -float(np.sum(freq * np.log2(freq + 1e-12)))
+            counts = list(Counter(tips).values())
+            entropy = _shannon_entropy(counts)
             name = clade.name or f"internal_{unnamed_counter}"
             entropy_map[name] = entropy
 
