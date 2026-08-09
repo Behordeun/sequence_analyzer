@@ -1,6 +1,7 @@
 """Sequence Alignment page: pairwise/MSA, GC skew, base composition, motif scanning."""
 
 import datetime
+import os
 from io import StringIO
 
 import plotly.express as px
@@ -77,16 +78,24 @@ if option == "Upload Sequence File(s)":
 
 elif option == "Enter Accession Numbers":
     acc_input = st.text_area("Enter Accession Numbers (one per line)", height=120)
+    genbank_email = st.text_input(
+        "Email for NCBI API",
+        value=os.environ.get("GENBANK_EMAIL", ""),
+        help="Required by NCBI usage policy. Set GENBANK_EMAIL env var to avoid entering each time.",
+    )
     if st.button("Retrieve Sequences"):
-        fetched = []
-        for acc in acc_input.strip().splitlines():
-            try:
-                record = fetch_sequence(acc.strip(), email="user@example.com")
-                fetched.append(record)
-            except (ValueError, ConnectionError) as e:
-                st.warning(f"Could not fetch {acc}: {e}")
-        st.session_state["sequences"] = fetched
-        st.success(f"Retrieved {len(fetched)} sequence(s) from GenBank.")
+        if not genbank_email.strip():
+            st.error("Email is required for GenBank API access.")
+        else:
+            fetched = []
+            for acc in acc_input.strip().splitlines():
+                try:
+                    record = fetch_sequence(acc.strip(), email=genbank_email.strip())
+                    fetched.append(record)
+                except (ValueError, ConnectionError) as e:
+                    st.warning(f"Could not fetch {acc}: {e}")
+            st.session_state["sequences"] = fetched
+            st.success(f"Retrieved {len(fetched)} sequence(s) from GenBank.")
 
 # Alignment options
 if st.session_state["sequences"]:
@@ -103,6 +112,7 @@ if st.session_state["sequences"]:
     st.session_state["show_motif"] = st.checkbox("Motif Scan Table")
 
     if st.button("Align Sequences"):
+        st.session_state.pop("format_exports", None)
         seqs = st.session_state["sequences"]
         if alignment_method == "Pairwise Alignment":
             result = align_pairwise(seqs, matrix=matrix, mode=mode)
@@ -141,12 +151,15 @@ if st.session_state["aligned"]:
         st.subheader("Alignment Output")
         st.markdown(st.session_state["aligned"], unsafe_allow_html=True)
 
-        fmt = st.selectbox("Download Format", [".fasta", ".clustal", ".nex", ".phy"])
         exports = st.session_state.get("format_exports", {})
-        fmt_map = {".fasta": "fasta", ".clustal": "clustal", ".nex": "nexus", ".phy": "phylip"}
-        content = exports.get(fmt_map.get(fmt, "fasta"), "")
-        if content:
-            st.download_button(f"Download {fmt}", content, file_name=f"alignment{fmt}")
+        if exports:
+            fmt = st.selectbox("Download Format", [".fasta", ".clustal", ".nex", ".phy"])
+            fmt_map = {".fasta": "fasta", ".clustal": "clustal", ".nex": "nexus", ".phy": "phylip"}
+            content = exports.get(fmt_map.get(fmt, "fasta"), "")
+            if content:
+                st.download_button(f"Download {fmt}", content, file_name=f"alignment{fmt}")
+        else:
+            st.info("Download formats are available for multiple sequence alignments.")
 
     if st.session_state["show_gc"]:
         st.subheader("GC Skew")

@@ -7,6 +7,37 @@ import argparse
 import sys
 from pathlib import Path
 
+from Bio.SeqRecord import SeqRecord
+
+
+def _load_valid_sequences(
+    input_path: Path, seq_type: str = "auto", min_count: int = 1
+) -> list[SeqRecord]:
+    """Read, parse, and validate sequences from a file.
+
+    Shared across CLI subcommands to avoid duplicating the file→records→validation flow.
+    """
+    from sequence_analyzer.core.validation import validate_sequences
+    from sequence_analyzer.io.parsers import parse_sequence_file
+
+    if not input_path.exists():
+        raise FileNotFoundError(f"Input file not found: {input_path}")
+
+    content = input_path.read_text(encoding="utf-8")
+    records = parse_sequence_file(content, format_hint="auto")
+
+    if not records:
+        raise ValueError(f"No sequences found in {input_path}")
+
+    valid = validate_sequences(records, seq_type=seq_type)
+
+    if len(valid) < min_count:
+        raise ValueError(
+            f"Need at least {min_count} valid sequence(s), got {len(valid)}."
+        )
+
+    return valid
+
 
 def main() -> None:
     """Top-level CLI entry point. Dispatches to subcommands."""
@@ -85,26 +116,17 @@ def main() -> None:
 def _cmd_analyze(args: argparse.Namespace) -> None:
     """Run sequence analysis from the command line."""
     from sequence_analyzer.core.analysis import analyze_sequences
-    from sequence_analyzer.core.validation import validate_sequences
-    from sequence_analyzer.io.parsers import parse_sequence_file
+    from sequence_analyzer.core.validation import detect_sequence_type
 
-    input_path = Path(args.input)
-    if not input_path.exists():
-        raise FileNotFoundError(f"Input file not found: {input_path}")
+    valid = _load_valid_sequences(Path(args.input), seq_type=args.type)
 
-    content = input_path.read_text(encoding="utf-8")
-    records = parse_sequence_file(content, format_hint="auto")
+    # Derive is_rna from the actual validated sequences when type is "auto"
+    if args.type == "auto":
+        detected = detect_sequence_type(str(valid[0].seq))
+        is_rna = detected == "RNA"
+    else:
+        is_rna = args.type == "RNA"
 
-    if not records:
-        raise ValueError(f"No sequences found in {input_path}")
-
-    seq_type = args.type if args.type != "auto" else "auto"
-    valid = validate_sequences(records, seq_type=seq_type)
-
-    if not valid:
-        raise ValueError("All sequences failed validation.")
-
-    is_rna = seq_type == "RNA"
     df = analyze_sequences(valid, is_rna=is_rna)
 
     output = df.to_csv(index=False)
@@ -118,26 +140,11 @@ def _cmd_analyze(args: argparse.Namespace) -> None:
 def _cmd_align(args: argparse.Namespace) -> None:
     """Run sequence alignment from the command line."""
     from sequence_analyzer.core.alignment import align_msa, align_pairwise
-    from sequence_analyzer.core.validation import validate_sequences
-    from sequence_analyzer.io.parsers import parse_sequence_file
 
-    input_path = Path(args.input)
-    if not input_path.exists():
-        raise FileNotFoundError(f"Input file not found: {input_path}")
-
-    content = input_path.read_text(encoding="utf-8")
-    records = parse_sequence_file(content, format_hint="auto")
-
-    if not records:
-        raise ValueError(f"No sequences found in {input_path}")
-
-    valid = validate_sequences(records, seq_type="auto")
-    if len(valid) < 2:
-        raise ValueError("At least 2 valid sequences are required for alignment.")
+    valid = _load_valid_sequences(Path(args.input), min_count=2)
 
     if args.method == "pairwise":
         result = align_pairwise(valid)
-        # Output summary for pairwise
         lines = []
         for pair in result.pairs:
             lines.append(f">{pair.seq_a_id} vs {pair.seq_b_id}")
@@ -161,23 +168,8 @@ def _cmd_align(args: argparse.Namespace) -> None:
 def _cmd_tree(args: argparse.Namespace) -> None:
     """Build phylogenetic tree from the command line."""
     from sequence_analyzer.core.phylogenetics import build_tree
-    from sequence_analyzer.core.validation import validate_sequences
-    from sequence_analyzer.io.parsers import parse_sequence_file
 
-    input_path = Path(args.input)
-    if not input_path.exists():
-        raise FileNotFoundError(f"Input file not found: {input_path}")
-
-    content = input_path.read_text(encoding="utf-8")
-    records = parse_sequence_file(content, format_hint="auto")
-
-    if not records:
-        raise ValueError(f"No sequences found in {input_path}")
-
-    valid = validate_sequences(records, seq_type="auto")
-    if len(valid) < 2:
-        raise ValueError("At least 2 valid sequences are required for tree construction.")
-
+    valid = _load_valid_sequences(Path(args.input), min_count=2)
     result = build_tree(valid, method=args.method)
 
     if args.output:

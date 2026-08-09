@@ -9,5 +9,9 @@ def run() -> None:
     from streamlit.web.cli import main_run
 
     app_path = str(Path(__file__).parent / "pages" / "homepage.py")
+    original_argv = sys.argv.copy()
     sys.argv = ["streamlit", "run", app_path, "--server.headless=true"]
-    main_run(app_path)
+    try:
+        main_run(app_path)
+    finally:
+        sys.argv = original_argv
