@@ -176,3 +176,8 @@ cython_debug/
 *.csv
 .streamlit/secrets.toml
 *.svg
+.history
+.kiro/
+
+# Project-specific
+sessions/
