@@ -1,135 +1,106 @@
 # Sequence Analyzer
 
-🔬 **Sequence Analyzer** is a bioinformatics tool designed to simplify sequence analysis and alignment tasks. Built using **Streamlit**, **Biopython**, and **Plotly**, this application provides an intuitive interface for analyzing DNA and RNA sequences, aligning sequences, and fetching sequences from GenBank.
+Bioinformatics toolkit for DNA/RNA sequence analysis, alignment, and phylogenetics.
 
----
+Usable as a **Python library**, a **CLI tool**, or a **Streamlit web application**.
 
-## 🚀 Features
+## Installation
 
-### 1. **Sequence Alignment**
+Requires Python 3.11+.
 
-- Perform **Pairwise Alignment** or **Multiple Sequence Alignment (MSA)** for DNA or RNA sequences.
-- Upload sequences in FASTA format or fetch them directly from GenBank using accession numbers.
-- Download aligned sequences in `.fasta`, `.txt`, or `.rtf` formats.
+```bash
+# Install with uv (recommended)
+uv sync                    # Core library only
+uv sync --extra app        # Include Streamlit web UI
+uv sync --all-extras       # Everything including dev tools
 
-### 2. **DNA Analysis**
-
-- Analyze DNA sequences for:
-  - GC content
-  - Nucleotide composition (A, T, G, C)
-- Visualize results with interactive histograms and scatter plots.
-- Export analysis results in `.csv`, `.txt`, or `.rtf` formats.
-
-### 3. **RNA Analysis**
-
-- Analyze RNA sequences for:
-  - GC content
-  - Nucleotide composition (A, U, G, C)
-- Visualize results with interactive histograms and scatter plots.
-- Export analysis results in `.csv`, `.txt`, or `.rtf` formats.
-
-### 4. **GenBank Sequence Retrieval**
-
-- Fetch sequences from GenBank using accession numbers.
-- Supports integration with NCBI's Entrez API.
-
-### 5. **Contact and About Pages**
-
-- Learn more about the application and its contributors.
-- Contact information for inquiries and contributions.
-
----
-
-## 📂 Project Structure
-
-```txt
-sequence_analyzer/
-│
-├── app.py                     # Main application entry point
-├── utils.py                   # Utility functions for sequence analysis and visualization
-├── requirements.txt           # Python dependencies
-├── pages/                     # Streamlit multipage application
-│   ├── 1_Sequence_Alignment.py # Sequence alignment page
-│   ├── 2_DNA_Analysis.py       # DNA analysis page
-│   ├── 3_RNA_Analysis.py       # RNA analysis page
-│   ├── 4_About.py              # About page
-│   └── 5_Contact.py            # Contact page
-├── README.md                  # Project documentation
-└── .gitignore                 # Git ignore file
+# Or install with pip
+pip install .              # Core library
+pip install ".[app]"       # With web UI
+pip install ".[app,dev]"   # With dev tools
 ```
 
----
+## Usage
 
-## 🛠️ Installation
+### As a CLI tool
 
-1. **Clone the Repository**
+```bash
+# Run sequence analysis
+sequence-analyzer analyze --input sequences.fasta --output results.csv
 
-   ```bash
-   git clone https://github.com/bioinformatics-project/sequence_analyzer.git
-   cd sequence_analyzer
-   ```
+# Align sequences (MSA, CLUSTAL output)
+sequence-analyzer align --input sequences.fasta --method msa --format clustal
 
-2. **Set Up a Virtual Environment**
+# Build a phylogenetic tree
+sequence-analyzer tree --input sequences.fasta --method nj --output tree.nwk
 
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+# Launch the web UI
+sequence-analyzer serve
+```
 
-3. **Install Dependencies**
+### As a Python library
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+```python
+from sequence_analyzer.io.parsers import parse_sequence_file
+from sequence_analyzer.core.validation import validate_sequences
+from sequence_analyzer.core.analysis import analyze_sequences
 
-4. **Run the Application**
+records = parse_sequence_file(open("sequences.fasta").read())
+valid = validate_sequences(records, seq_type="DNA")
+df = analyze_sequences(valid, is_rna=False)
+print(df)
+```
 
-   ```bash
-   streamlit run app.py
-   ```
+### Web application
 
----
+```bash
+sequence-analyzer serve
+# Opens at http://localhost:8501
+```
 
-## 📊 Usage
+## Development
 
-1. Launch the application using the command above.
-2. Use the **navigation menu** on the left to explore the following features:
-   - **Sequence Alignment**: Upload or fetch sequences and perform alignments.
-   - **DNA Analysis**: Analyze DNA sequences for GC content and nucleotide composition.
-   - **RNA Analysis**: Analyze RNA sequences for GC content and nucleotide composition.
-   - **About**: Learn more about the application.
-   - **Contact**: Reach out for inquiries or contributions.
+```bash
+# Clone and setup
+git clone https://github.com/Behordeun/sequence_analyzer.git
+cd sequence_analyzer
+uv sync --all-extras
 
----
+# Run tests
+uv run pytest
 
-## 📜 License
+# Lint and format
+uv run ruff check src/ tests/
+uv run ruff format src/ tests/
 
-This project is licensed under the [MIT License](LICENSE).
+# Type check
+uv run mypy src/
+```
 
----
+## Project Structure
 
-## 🤝 Contributing
+```text
+src/sequence_analyzer/
+├── cli.py              # CLI entry point (analyze, align, tree, serve)
+├── core/               # Pure computation (no UI dependencies)
+│   ├── alignment.py    # Pairwise + MSA
+│   ├── analysis.py     # GC content, skew, composition
+│   ├── genbank.py      # NCBI Entrez fetching
+│   ├── motifs.py       # Regex motif scanning
+│   ├── phylogenetics.py # Tree construction + bootstrapping
+│   └── validation.py   # Sequence cleaning + type detection
+├── models/             # Typed dataclasses for results
+├── io/                 # File parsing (FASTA, PHYLIP, NEXUS)
+└── app/                # Streamlit web interface
+    ├── main.py         # Streamlit launcher
+    └── pages/          # Multipage app
+```
 
-We welcome contributions to improve this application! To contribute:
+## Authors
 
-1. Fork the repository.
-2. Create a new branch for your feature or bug fix.
-3. Submit a pull request with a detailed description of your changes.
+- Muhammad Abiodun Sulaiman ([GitHub](https://github.com/Behordeun))
+- Bolaji Fatai Oyeyemi ([GitHub](https://github.com/bollergene))
 
----
+## License
 
-## 📧 Contact
-
-For inquiries or contributions, please reach out:
-
-- 📧 Email: **[Muhammad Abiodun SULAIMAN](mailto:abiodun.msulaiman@gmail.com), [Bolaji Fatai OYEYEMI](mailto:bolajioyeyemi@gmail.com)**
-- 🛠 GitHub: **[Sequence Analyzer](https://github.com/Behordeun/sequence_analyzer)**
-
----
-
-## ❤️ Acknowledgments
-
-Developed with ❤️ using **Streamlit**, **Biopython**, and **Plotly** by:
-
-- [Behordeun](https://github.com/Behordeun)
-- [Bollergene](https://github.com/bollergene)
+MIT
