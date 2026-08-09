@@ -90,6 +90,13 @@ class TestBootstrapTree:
         with pytest.raises(ValueError, match="Replicates must be >= 10"):
             bootstrap_tree(result.alignment, replicates=5)
 
+    def test_raises_on_empty_alignment(self):
+        from Bio.Align import MultipleSeqAlignment
+
+        empty_alignment = MultipleSeqAlignment([])
+        with pytest.raises(ValueError, match="Alignment is empty"):
+            bootstrap_tree(empty_alignment, method="nj", replicates=10)
+
     def test_raises_on_invalid_method(self, divergent_sequences):
         result = build_tree(divergent_sequences, method="nj")
         with pytest.raises(ValueError, match="Method must be"):

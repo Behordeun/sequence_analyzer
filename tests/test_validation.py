@@ -30,10 +30,9 @@ class TestDetectSequenceType:
         assert detect_sequence_type("atgcgatcg") == "DNA"
 
     def test_empty_string_returns_dna_default(self):
-        # With no characters to score, the first alphabet checked with score 0
-        # wins. DNA is checked first, so it wins by default.
+        # With no characters to score, best_type stays at its initial value "DNA"
         result = detect_sequence_type("")
-        assert result in ("DNA", "RNA", "Protein")
+        assert result == "DNA"
 
 
 class TestCleanSequence:

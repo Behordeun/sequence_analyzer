@@ -141,12 +141,12 @@ def align_msa(
 
     format_exports = _write_alignment_formats(alignment)
 
-    # Column-wise identity against first sequence as reference
+    # Column-wise identity: compare each non-reference sequence to the reference
     seq_matrix = [str(r.seq) for r in padded]
     match_count = 0
     total = 0
 
-    for i in range(len(seq_matrix)):
+    for i in range(1, len(seq_matrix)):
         for j, base in enumerate(seq_matrix[i]):
             ref = seq_matrix[0][j]
             if base == ref:

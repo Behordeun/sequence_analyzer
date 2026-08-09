@@ -31,6 +31,7 @@ def detect_sequence_type(sequence: str) -> str:
 
     Scores each alphabet by counting how many characters in the sequence
     belong to that alphabet. Returns the type with the highest match count.
+    Returns "DNA" by default for empty sequences.
     """
     seq_upper = sequence.upper()
     best_type = "DNA"

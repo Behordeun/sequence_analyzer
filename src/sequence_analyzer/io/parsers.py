@@ -68,10 +68,13 @@ def parse_sequence_file(content: str | bytes, format_hint: str = "auto") -> list
     try:
         records = list(SeqIO.parse(StringIO(content), fmt))
     except Exception as e:
-        # Try fasta-pearson as fallback (handles some edge cases)
-        try:
-            records = list(SeqIO.parse(StringIO(content), "fasta-pearson"))
-        except Exception:
+        # Only attempt fasta-pearson fallback for FASTA-like formats
+        if fmt in ("fasta", "fasta-pearson"):
+            try:
+                records = list(SeqIO.parse(StringIO(content), "fasta-pearson"))
+            except Exception:
+                raise ValueError(f"Failed to parse content as '{fmt}': {e}") from e
+        else:
             raise ValueError(f"Failed to parse content as '{fmt}': {e}") from e
 
     return records

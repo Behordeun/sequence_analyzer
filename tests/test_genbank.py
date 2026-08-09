@@ -45,6 +45,16 @@ class TestFetchSequence:
         with pytest.raises(ValueError, match="Email is required"):
             fetch_sequence("NM_001301717", email="")
 
+    @patch("sequence_analyzer.core.genbank.Entrez.efetch")
+    def test_not_found_response_body_raises_value_error(self, mock_efetch):
+        mock_handle = MagicMock()
+        mock_handle.read.return_value = "Nothing has been found"
+        mock_handle.close = MagicMock()
+        mock_efetch.return_value = mock_handle
+
+        with pytest.raises(ValueError, match="not found"):
+            fetch_sequence("INVALID_ACC", email="test@example.com")
+
 
 class TestFetchSequences:
     @patch("sequence_analyzer.core.genbank.fetch_sequence")
