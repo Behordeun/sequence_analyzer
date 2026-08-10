@@ -19,7 +19,7 @@
   },
   "updateContentCommand": "[ -f packages.txt ] && sudo apt update && sudo apt upgrade -y && sudo xargs apt install -y <packages.txt; pip install uv && uv pip install --system '.[app,dev]'; echo '✅ Packages installed'",
   "postAttachCommand": {
-    "server": "streamlit run src/sequence_analyzer/app/pages/homepage.py --server.enableCORS false --server.enableXsrfProtection false"
+    "server": "streamlit run src/sequence_analyzer/app/streamlit_app.py --server.enableCORS false --server.enableXsrfProtection false"
   },
   "portsAttributes": {
     "8501": {

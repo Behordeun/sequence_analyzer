@@ -1,31 +1,36 @@
-"""Homepage for the Sequence Analyzer Streamlit application."""
+"""Streamlit entry point for the Sequence Analyzer application.
+
+Lives at the `app/` level so Streamlit's multipage discovery finds `pages/`
+as a sibling directory and registers all sub-pages automatically.
+"""
 
 import streamlit as st
 
 from sequence_analyzer.app.components import hide_streamlit_chrome, render_footer
 from sequence_analyzer.app.styles import apply_styles
 
-st.set_page_config(page_title="Sequence Analyzer App", page_icon="🔬", layout="wide")
+st.set_page_config(page_title="Sequence Analyzer App", page_icon="\U0001f52c", layout="wide")
 apply_styles()
 hide_streamlit_chrome()
 
-st.title("🔬 Sequence Analyzer Application")
+st.title("\U0001f52c Sequence Analyzer Application")
 
 st.markdown(
     """
 ## Guided Pipeline
 
 Start the **guided workflow** to walk through your analysis step by step:
-**Ingest → QC → Analyze → Align → Tree → Report**
+**Ingest \u2192 QC \u2192 Analyze \u2192 Align \u2192 Tree \u2192 Report**
 
 Your data carries forward through each stage, and you'll get a downloadable
 report at the end.
 """,
 )
 
-st.markdown(
-    "\U0001f680 Use the **sidebar navigation** to access the Guided Pipeline "
-    "or any individual tool."
+st.page_link(
+    "pages/pipeline/1_Ingest.py",
+    label="Start Guided Pipeline \u2192",
+    icon="\U0001f680",
 )
 
 st.markdown("---")
