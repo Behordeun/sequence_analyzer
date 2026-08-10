@@ -15,6 +15,19 @@ from sequence_analyzer.core.report import (
     generate_methods_section,
     generate_pdf_report,
 )
+from sequence_analyzer.core.validation import detect_sequence_type
+
+
+def _resolve_seq_type(config, state) -> str:
+    """Derive the actual sequence type for the methods section."""
+    if config.seq_type != "auto":
+        return config.seq_type.upper()
+    # Majority vote from validated sequences
+    sequences = state.valid_sequences or state.sequences
+    if not sequences:
+        return "DNA"
+    rna_count = sum(1 for r in sequences if detect_sequence_type(str(r.seq)) == "RNA")
+    return "RNA" if rna_count > len(sequences) // 2 else "DNA"
 
 st.set_page_config(layout="wide", page_title="Pipeline: Report")
 apply_styles()
@@ -68,7 +81,7 @@ if st.button("Generate Report"):
     methods = generate_methods_section(
         seq_count=seq_count,
         qc_pass_count=qc_pass_count,
-        seq_type=config.seq_type.upper() if config.seq_type != "auto" else "DNA",
+        seq_type=_resolve_seq_type(config, state),
         alignment_method=config.alignment_method,
         tree_method=config.tree_method,
         bootstrap_replicates=config.bootstrap_replicates,
@@ -99,7 +112,9 @@ if st.button("Generate Report"):
 
     # --- Preview ---
     with st.expander("Preview Report", expanded=False):
-        st.markdown(html, unsafe_allow_html=True)
+        import html as html_lib
+
+        st.markdown(html_lib.escape(html), unsafe_allow_html=False)
 
     # --- Downloads ---
     col1, col2 = st.columns(2)

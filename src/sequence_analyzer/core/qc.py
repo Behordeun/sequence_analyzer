@@ -91,21 +91,26 @@ def assess_sequences(
         status = "Pass"
 
         # Fail conditions
-        if row["Ambiguity_Rate"] > ambiguity_threshold:
-            flags.append("High ambiguity")
+        if row["Length"] == 0:
+            flags.append("Empty sequence")
             status = "Fail"
+        else:
+            if row["Ambiguity_Rate"] > ambiguity_threshold:
+                flags.append("High ambiguity")
+                status = "Fail"
 
-        if row["Length"] < min_length:
-            flags.append("Too short")
-            status = "Fail"
+            if row["Length"] < min_length:
+                flags.append("Too short")
+                status = "Fail"
 
-        if row["Gap_Fraction"] > max_gap_fraction:
-            flags.append("Excessive gaps")
-            status = "Fail"
+            if row["Gap_Fraction"] > max_gap_fraction:
+                flags.append("Excessive gaps")
+                status = "Fail"
 
         # Warning conditions (only if not already failed)
         if status != "Fail":
-            if 2.0 <= row["Ambiguity_Rate"] <= ambiguity_threshold:
+            borderline_lower = 0.5 * ambiguity_threshold
+            if borderline_lower <= row["Ambiguity_Rate"] <= ambiguity_threshold:
                 flags.append("Borderline ambiguity")
                 status = "Warning"
 

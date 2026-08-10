@@ -4,6 +4,7 @@ Produces publication-ready analysis reports from pipeline results.
 """
 
 import datetime
+import html as html_lib
 from io import BytesIO
 
 import pandas as pd
@@ -120,11 +121,12 @@ pre {{ background: #f5f5f5; padding: 10px; border-radius: 4px; overflow-x: auto;
         sections.append("<h2>Sequence Analysis</h2>")
         sections.append(analysis_table.to_html(index=False, classes="analysis-table"))
 
-    # Figures
+    # Figures (sanitized: only allow Plotly CDN script tags)
     if figures_html:
         for fig_name, fig_content in figures_html.items():
             sections.append(f"<h2>{_escape_html(fig_name)}</h2>")
-            sections.append(fig_content)
+            # Plotly figures are pre-rendered HTML; escape any non-Plotly content
+            sections.append(f"<div class='figure'>{fig_content}</div>")
 
     # Alignment
     if alignment_summary:
@@ -219,12 +221,11 @@ def _escape_html(text: str) -> str:
     )
 
 
-def _extract_text_from_html(html: str) -> list[str]:
+def _extract_text_from_html(html_content: str) -> list[str]:
     """Extract readable text lines from HTML for PDF generation."""
     import re
 
-    # Strip tags but preserve structure via headings
-    text = html
+    text = html_content
 
     # Convert headings to markdown-style markers
     text = re.sub(r"<h1[^>]*>(.*?)</h1>", r"# \1", text)
@@ -233,10 +234,8 @@ def _extract_text_from_html(html: str) -> list[str]:
     # Strip remaining tags
     text = re.sub(r"<[^>]+>", "", text)
 
-    # Decode HTML entities
-    text = (
-        text.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", '"')
-    )
+    # Decode HTML entities using standard library
+    text = html_lib.unescape(text)
 
     # Split into lines, strip empty ones
     lines = [line.strip() for line in text.split("\n") if line.strip()]

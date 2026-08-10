@@ -72,7 +72,7 @@ def _status_color(status: str) -> str:
     return "background-color: #ffcdd2"
 
 
-styled_df = qc_df.style.applymap(_status_color, subset=["Status"])
+styled_df = qc_df.style.map(_status_color, subset=["Status"])
 st.dataframe(styled_df, use_container_width=True)
 
 # --- Filter options ---

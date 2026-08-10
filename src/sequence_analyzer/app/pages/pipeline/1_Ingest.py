@@ -48,7 +48,11 @@ if input_method == "Upload File(s)":
             if size_mb > 50:
                 st.error(f"{f.name} exceeds 50MB limit ({size_mb:.1f}MB). Skipped.")
                 continue
-            content = f.getvalue().decode("utf-8")
+            try:
+                content = f.getvalue().decode("utf-8")
+            except UnicodeDecodeError:
+                st.error(f"{f.name} is not a valid UTF-8 text file. Skipped.")
+                continue
             records = parse_sequence_file(content, format_hint="auto")
             if not records:
                 warnings.append(f"No sequences found in {f.name}")

@@ -8,12 +8,9 @@ without re-uploads or re-configuration.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import pandas as pd
-
-if TYPE_CHECKING:
-    pass
 
 STAGES = ["Ingest", "QC", "Analyze", "Align", "Tree", "Report"]
 
@@ -102,3 +99,9 @@ def reset_pipeline() -> None:
     import streamlit as st
 
     st.session_state["pipeline"] = PipelineState()
+
+
+def reset_config() -> None:
+    """Reset just the configuration to default values."""
+    state = get_pipeline_state()
+    state.config = PipelineConfig()

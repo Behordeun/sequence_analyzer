@@ -12,6 +12,7 @@ from sequence_analyzer.app.pages.pipeline.state import (
     STAGES,
     get_pipeline_state,
     is_stage_complete,
+    reset_config,
     update_stage,
 )
 
@@ -46,7 +47,7 @@ def render_stage_nav() -> str | None:
     state = get_pipeline_state()
     current_idx = STAGES.index(state.stage) if state.stage in STAGES else 0
 
-    col_back, col_spacer, col_next = st.columns([1, 4, 1])
+    col_back, _, col_next = st.columns([1, 4, 1])
 
     target: str | None = None
 
@@ -154,9 +155,5 @@ def render_config_sidebar() -> None:
 
         st.markdown("---")
         if st.button("Reset to Defaults", key="pipeline_reset"):
-            state.config = PipelineConfig()
+            reset_config()
             st.rerun()
-
-
-# Re-export PipelineConfig for the sidebar reset
-from sequence_analyzer.app.pages.pipeline.state import PipelineConfig  # noqa: E402

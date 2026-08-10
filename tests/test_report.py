@@ -77,6 +77,11 @@ class TestGenerateHtmlReport:
         html = generate_html_report(title="Test", methods_section="M", qc_table=None)
         assert "Quality Control" not in html
 
+    def test_omits_qc_section_when_empty_dataframe(self):
+        df = pd.DataFrame(columns=["ID", "Status"])
+        html = generate_html_report(title="Test", methods_section="M", qc_table=df)
+        assert "Quality Control" not in html
+
     def test_contains_analysis_table_when_provided(self):
         df = pd.DataFrame({"Sequence": ["s1"], "GC_Content": [52.0]})
         html = generate_html_report(title="Test", methods_section="M", analysis_table=df)

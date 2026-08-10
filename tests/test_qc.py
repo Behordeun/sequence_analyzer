@@ -116,8 +116,30 @@ class TestAssessSequences:
     def test_detects_sequence_type(self):
         records = [SeqRecord(Seq("AUGCGAUCGAUCG"), id="rna_seq")]
         df = assess_sequences(records)
-        # Should detect as DNA or RNA (both alphabets overlap heavily)
         assert df.iloc[0]["Type"] in ("DNA", "RNA")
+
+    def test_detects_protein_type_and_ambiguity(self):
+        seq_str = "ACDEFGHIKLMNPQRSTVWYXBZJ"
+        records = [SeqRecord(Seq(seq_str), id="protein_seq")]
+        df = assess_sequences(records)
+        assert df.iloc[0]["Type"] == "Protein"
+        # X, B, Z, J are ambiguous for protein = 4/24 * 100 ≈ 16.67%
+        expected_rate = 4 / len(seq_str) * 100
+        assert df.iloc[0]["Ambiguity_Rate"] == pytest.approx(expected_rate, rel=0.01)
+
+    def test_zero_length_sequence_has_zero_metrics(self):
+        records = [
+            SeqRecord(Seq(""), id="empty"),
+            SeqRecord(Seq("ATGCGATCGATCG"), id="nonempty"),
+        ]
+        df = assess_sequences(records, min_length=10)
+        empty_row = df[df["ID"] == "empty"].iloc[0]
+        assert empty_row["Length"] == 0
+        assert empty_row["GC_Percent"] == pytest.approx(0.0)
+        assert empty_row["Ambiguity_Rate"] == pytest.approx(0.0)
+        assert empty_row["Gap_Fraction"] == pytest.approx(0.0)
+        assert empty_row["Status"] == "Fail"
+        assert "Empty sequence" in empty_row["Flags"]
 
 
 class TestFilterPassing:
