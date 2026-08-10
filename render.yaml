@@ -8,7 +8,7 @@ services:
     repo: https://github.com/Behordeun/sequence_analyzer
     buildCommand: |
       pip install --upgrade pip && pip install ".[app]"
-    startCommand: python -m streamlit run src/sequence_analyzer/app/pages/homepage.py --server.headless=true --server.port=$PORT --server.address=0.0.0.0
+    startCommand: python -m streamlit run src/sequence_analyzer/app/pages/homepage.py --server.headless=true --server.port=$PORT --server.address=0.0.0.0 --server.baseUrlPath=""
     envVars:
       - key: PYTHON_VERSION
         value: "3.11.15"
