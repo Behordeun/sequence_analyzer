@@ -7,7 +7,7 @@ services:
     branch: main
     buildCommand: |
       pip install uv && uv pip install --system ".[app]"
-    startCommand: streamlit run src/sequence_analyzer/app/pages/homepage.py --server.headless=true --server.port=$PORT --server.address=0.0.0.0
+    startCommand: python -m streamlit run src/sequence_analyzer/app/pages/homepage.py --server.headless=true --server.port=$PORT --server.address=0.0.0.0
     envVars:
       - key: PYTHON_VERSION
         value: "3.11.15"
