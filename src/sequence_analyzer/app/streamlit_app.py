@@ -27,11 +27,18 @@ report at the end.
 """,
 )
 
-st.page_link(
-    "pages/pipeline/1_Ingest.py",
-    label="Start Guided Pipeline \u2192",
-    icon="\U0001f680",
+st.markdown(
+    "\U0001f680 Use the **sidebar navigation** to access individual analysis tools, "
+    "or select a step below to start the guided pipeline."
 )
+
+col1, col2, col3 = st.columns(3)
+with col1:
+    st.page_link("pages/1_Sequence_Alignment.py", label="Sequence Alignment", icon="\U0001f9ec")
+with col2:
+    st.page_link("pages/2_DNA_Analysis.py", label="DNA Analysis", icon="\U0001f9ea")
+with col3:
+    st.page_link("pages/3_RNA_Analysis.py", label="RNA Analysis", icon="\U0001f52c")
 
 st.markdown("---")
 

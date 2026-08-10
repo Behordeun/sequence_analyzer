@@ -3,7 +3,7 @@
 import streamlit as st
 
 from sequence_analyzer.app.components import hide_streamlit_chrome, render_footer
-from sequence_analyzer.app.pages.common_analysis import render_sequence_analysis_page
+from sequence_analyzer.app.pages._common_analysis import render_sequence_analysis_page
 from sequence_analyzer.app.styles import apply_styles
 
 st.set_page_config(layout="wide")
