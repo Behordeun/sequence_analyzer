@@ -39,7 +39,7 @@ def scan_motifs(sequences: list[SeqRecord], pattern: str) -> pd.DataFrame:
         matches = [m.start() for m in compiled.finditer(seq_str)]
         hits.append(
             MotifHit(
-                sequence_id=record.id or '',
+                sequence_id=record.id or "",
                 pattern=pattern,
                 hit_count=len(matches),
                 positions=matches,

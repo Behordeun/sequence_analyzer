@@ -13,18 +13,32 @@ st.title("🔬 Sequence Analyzer Application")
 
 st.markdown(
     """
-## About This Application
-The **Sequence Analyzer Application** helps researchers, students, and bioinformaticians
-perform DNA, RNA, and Phylogenetic sequence analysis from a web interface.
+## Guided Pipeline
 
----
+Start the **guided workflow** to walk through your analysis step by step:
+**Ingest → QC → Analyze → Align → Tree → Report**
 
-## Getting Started
-Use the **navigation menu on the left** to:
-1. Perform Sequence Alignment
-2. Access DNA / RNA Analysis
-3. Build Phylogenetic Trees
-4. Learn more from the "About" section
+Your data carries forward through each stage, and you'll get a downloadable
+report at the end.
+""",
+)
+
+st.page_link(
+    "pages/pipeline/1_Ingest.py",
+    label="Start Guided Pipeline →",
+    icon="🚀",
+)
+
+st.markdown("---")
+
+st.markdown(
+    """
+## Individual Tools
+
+Or use the **navigation menu on the left** to access individual tools directly:
+1. Sequence Alignment
+2. DNA / RNA Analysis
+3. Phylogenetic Trees
 
 ---
 

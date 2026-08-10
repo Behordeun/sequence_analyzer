@@ -53,10 +53,7 @@ def _resample_alignment(alignment: MultipleSeqAlignment) -> MultipleSeqAlignment
     """Resample alignment columns with replacement for bootstrapping."""
     col_count = len(alignment[0])
     idx = [secrets.randbelow(col_count) for _ in range(col_count)]
-    boot_records = [
-        SeqRecord(Seq("".join(str(r.seq)[i] for i in idx)), id=r.id)
-        for r in alignment
-    ]
+    boot_records = [SeqRecord(Seq("".join(str(r.seq)[i] for i in idx)), id=r.id) for r in alignment]
     return MultipleSeqAlignment(boot_records)
 
 

@@ -32,9 +32,7 @@ def _load_valid_sequences(
     valid = validate_sequences(records, seq_type=seq_type)
 
     if len(valid) < min_count:
-        raise ValueError(
-            f"Need at least {min_count} valid sequence(s), got {len(valid)}."
-        )
+        raise ValueError(f"Need at least {min_count} valid sequence(s), got {len(valid)}.")
 
     return valid
 
@@ -122,9 +120,7 @@ def _cmd_analyze(args: argparse.Namespace) -> None:
 
     # Derive is_rna from all validated sequences via majority vote
     if args.type == "auto":
-        rna_count = sum(
-            1 for r in valid if detect_sequence_type(str(r.seq)) == "RNA"
-        )
+        rna_count = sum(1 for r in valid if detect_sequence_type(str(r.seq)) == "RNA")
         is_rna = rna_count > len(valid) // 2
     else:
         is_rna = args.type == "RNA"
