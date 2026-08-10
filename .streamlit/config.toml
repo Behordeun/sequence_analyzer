@@ -18,17 +18,12 @@ font = "sans serif"
 # You can also inject custom fonts or styles via markdown in main app
 
 [server]
-# Run Streamlit on port 8501
-port = 8501
-
-# Cross-Origin access (True if deploying externally)
-enableCORS = true
-
 # Upload size limit (MB)
 maxUploadSize = 200
 
 # Deployment-ready: no browser popup
 headless = true
 
-# Optional: Improve dev performance
+# Required for Render's reverse proxy
+enableCORS = false
 enableXsrfProtection = false
