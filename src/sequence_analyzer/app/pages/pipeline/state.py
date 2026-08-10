@@ -8,9 +8,14 @@ without re-uploads or re-configuration.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING
 
 import pandas as pd
+
+if TYPE_CHECKING:
+    from Bio.SeqRecord import SeqRecord
+
+    from sequence_analyzer.models.sequences import AlignmentResult, PhylogeneticResult
 
 STAGES = ["Ingest", "QC", "Analyze", "Align", "Tree", "Report"]
 
@@ -42,21 +47,21 @@ class PipelineState:
     config: PipelineConfig = field(default_factory=PipelineConfig)
 
     # Ingest output
-    sequences: list[Any] = field(default_factory=list)
+    sequences: list[SeqRecord] = field(default_factory=list)
     ingest_summary: str = ""
 
     # QC output
     qc_results: pd.DataFrame | None = None
-    valid_sequences: list[Any] = field(default_factory=list)
+    valid_sequences: list[SeqRecord] = field(default_factory=list)
 
     # Analysis output
     analysis_results: pd.DataFrame | None = None
 
     # Alignment output
-    alignment_result: Any | None = None
+    alignment_result: AlignmentResult | None = None
 
     # Tree output
-    tree_result: Any | None = None
+    tree_result: PhylogeneticResult | None = None
 
     # Report config
     report_title: str = ""

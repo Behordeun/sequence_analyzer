@@ -75,6 +75,9 @@ if not completed:
 
 # --- Generate ---
 if st.button("Generate Report"):
+    if not state.sequences:
+        st.error("No sequences available. Complete the Ingest stage first.")
+        st.stop()
     seq_count = len(state.sequences)
     qc_pass_count = len(state.valid_sequences) if state.valid_sequences else seq_count
 
@@ -88,20 +91,15 @@ if st.button("Generate Report"):
         gc_window_size=config.gc_window_size,
     )
 
-    alignment_summary = ""
-    if has_alignment:
-        alignment_summary = f"Method: {config.alignment_method}, Identity: {state.alignment_result.avg_identity:.1f}%"
-
-    tree_newick = ""
-    if has_tree:
-        tree_newick = state.tree_result.newick
+    alignment_summary = f"Method: {config.alignment_method}, Identity: {state.alignment_result.avg_identity:.1f}%" if has_alignment else ""
+    tree_newick = state.tree_result.newick if has_tree else ""
 
     html = generate_html_report(
         title=state.report_title,
         methods_section=methods,
         qc_table=state.qc_results,
         analysis_table=state.analysis_results,
-        figures_html=state.figures if state.figures else None,
+        figures_html=state.figures or None,
         alignment_summary=alignment_summary,
         tree_newick=tree_newick,
         notes=state.report_notes,
@@ -112,9 +110,9 @@ if st.button("Generate Report"):
 
     # --- Preview ---
     with st.expander("Preview Report", expanded=False):
-        import html as html_lib
+        import streamlit.components.v1 as components
 
-        st.markdown(html_lib.escape(html), unsafe_allow_html=False)
+        components.html(html, height=600, scrolling=True)
 
     # --- Downloads ---
     col1, col2 = st.columns(2)
