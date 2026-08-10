@@ -5,8 +5,9 @@ services:
     region: oregon
     plan: free
     branch: main
+    repo: https://github.com/Behordeun/sequence_analyzer
     buildCommand: |
-      pip install uv && rm -rf .venv && uv venv && uv pip install ".[app]"
+      pip install --upgrade pip && pip install ".[app]"
     startCommand: python -m streamlit run src/sequence_analyzer/app/pages/homepage.py --server.headless=true --server.port=$PORT --server.address=0.0.0.0
     envVars:
       - key: PYTHON_VERSION
