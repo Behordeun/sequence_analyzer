@@ -24,9 +24,9 @@ report at the end.
 )
 
 st.page_link(
-    "pages/pipeline/1_Ingest.py",
-    label="Start Guided Pipeline →",
-    icon="🚀",
+    "pipeline/1_Ingest.py",
+    label="Start Guided Pipeline \u2192",
+    icon="\U0001f680",
 )
 
 st.markdown("---")
