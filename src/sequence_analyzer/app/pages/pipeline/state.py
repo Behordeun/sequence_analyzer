@@ -15,7 +15,11 @@ import pandas as pd
 if TYPE_CHECKING:
     from Bio.SeqRecord import SeqRecord
 
-    from sequence_analyzer.models.sequences import AlignmentResult, PhylogeneticResult
+    from sequence_analyzer.models.sequences import (
+        AlignmentResult,
+        PhylogeneticResult,
+        VariantResult,
+    )
 
 STAGES = ["Ingest", "QC", "Analyze", "Align", "Tree", "Report"]
 
@@ -59,6 +63,9 @@ class PipelineState:
 
     # Alignment output
     alignment_result: AlignmentResult | None = None
+
+    # Variant calling output
+    variant_result: VariantResult | None = None
 
     # Tree output
     tree_result: PhylogeneticResult | None = None
