@@ -11,6 +11,10 @@ from sequence_analyzer.app.pages.pipeline.navigation import (
 )
 from sequence_analyzer.app.pages.pipeline.state import get_pipeline_state, mark_complete
 from sequence_analyzer.app.styles import apply_styles
+from sequence_analyzer.core.contamination import (
+    detect_contamination,
+    load_organism_profiles,
+)
 from sequence_analyzer.core.qc import assess_sequences, filter_passing
 
 st.set_page_config(layout="wide", page_title="Pipeline: QC")
@@ -74,6 +78,68 @@ def _status_color(status: str) -> str:
 
 styled_df = qc_df.style.map(_status_color, subset=["Status"])
 st.dataframe(styled_df, use_container_width=True)
+
+# --- Contamination Detection ---
+st.subheader("Contamination Screening")
+
+if not state.sequences:
+    st.info("No sequences available for contamination screening.")
+else:
+    profiles = load_organism_profiles()
+    available_organisms = sorted(profiles.keys())
+
+    # Build display-name mapping for the selectbox
+    organism_options = {slug: profiles[slug]["display_name"] for slug in available_organisms}
+    selected_slug = st.selectbox(
+        "Organism profile",
+        options=available_organisms,
+        format_func=lambda slug: organism_options[slug],
+        index=available_organisms.index("general") if "general" in available_organisms else 0,
+        help="Select the expected organism to compare against. 'General' uses permissive thresholds.",
+    )
+
+    contamination_df = detect_contamination(state.sequences, organism=selected_slug)
+
+    # Summary metrics
+    high_risk = (contamination_df["Contamination_Risk"] == "High").sum()
+    med_risk = (contamination_df["Contamination_Risk"] == "Medium").sum()
+    low_risk = (contamination_df["Contamination_Risk"] == "Low").sum()
+
+    risk_col1, risk_col2, risk_col3 = st.columns(3)
+    risk_col1.metric("Low Risk", int(low_risk))
+    risk_col2.metric("Medium Risk", int(med_risk))
+    risk_col3.metric("High Risk", int(high_risk))
+
+    if high_risk > 0:
+        st.warning(
+            f"{int(high_risk)} sequence(s) flagged as high contamination risk. "
+            "Review before proceeding — these may be from a different organism."
+        )
+
+    def _risk_color(risk: str) -> str:
+        if risk == "Low":
+            return "background-color: #c8e6c9"
+        elif risk == "Medium":
+            return "background-color: #fff9c4"
+        return "background-color: #ffcdd2"
+
+    # Show condensed contamination table
+    display_cols = [
+        "ID",
+        "GC_Observed",
+        "GC_Expected",
+        "GC_Deviation",
+        "Contamination_Risk",
+        "Risk_Reason",
+    ]
+    contamination_styled = contamination_df[display_cols].style.map(
+        _risk_color, subset=["Contamination_Risk"]
+    )
+    st.dataframe(contamination_styled, use_container_width=True)
+
+    # Merge contamination risk into the main QC dataframe for downstream use
+    qc_df["Contamination_Risk"] = contamination_df["Contamination_Risk"].values
+    state.qc_results = qc_df
 
 # --- Filter options ---
 include_warnings = st.checkbox("Include sequences with warnings", value=True)
