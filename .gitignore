@@ -178,6 +178,7 @@ cython_debug/
 *.svg
 .history
 .kiro/
+archives
 
 # Project-specific
 sessions/
