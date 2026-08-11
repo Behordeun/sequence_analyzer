@@ -106,12 +106,15 @@ if len(sequences) >= 2:
             st.warning("Need at least one sample sequence besides the reference.")
         else:
             with st.spinner("Calling variants..."):
-                variant_result = call_variants(reference, samples)
-                state.variant_result = variant_result
-                st.success(
-                    f"Found {variant_result.summary['total']} variant(s) "
-                    f"across {len(samples)} sample(s)."
-                )
+                try:
+                    variant_result = call_variants(reference, samples)
+                    state.variant_result = variant_result
+                    st.success(
+                        f"Found {variant_result.summary['total']} variant(s) "
+                        f"across {len(samples)} sample(s)."
+                    )
+                except Exception as e:
+                    st.error(f"Variant calling failed: {e}")
 
     # Display variant results
     if state.variant_result:

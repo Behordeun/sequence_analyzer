@@ -8,6 +8,7 @@ table suitable for display or export.
 from __future__ import annotations
 
 from collections import Counter
+from enum import StrEnum
 
 import pandas as pd
 from Bio.Align import PairwiseAligner, substitution_matrices
@@ -16,37 +17,42 @@ from Bio.SeqRecord import SeqRecord
 from sequence_analyzer.models.sequences import Variant, VariantResult
 
 
-def _align_to_reference(
-    reference: SeqRecord,
-    sample: SeqRecord,
-    matrix: str = "NUC.4.4",
-) -> tuple[str, str]:
-    """Align a single sample against the reference using global pairwise alignment.
+class VariantType(StrEnum):
+    """Constrained variant type values."""
 
-    Returns the aligned reference and sample strings (with gap characters)
-    of equal length, suitable for position-by-position variant extraction.
+    SNP = "SNP"
+    INSERTION = "insertion"
+    DELETION = "deletion"
 
-    Gap penalties are set to strongly prefer mismatches over gap-open events,
-    which ensures SNPs are reported as substitutions rather than
-    deletion+insertion pairs.
+
+def _build_aligner(matrix: str = "NUC.4.4") -> PairwiseAligner:
+    """Create a configured aligner instance for variant calling.
+
+    Gap penalties are tuned so that single mismatches (score -4 in NUC.4.4)
+    are always preferred over opening gap pairs. This ensures SNPs are
+    reported as substitutions rather than deletion+insertion artifacts.
     """
     aligner = PairwiseAligner()
     aligner.mode = "global"
     aligner.substitution_matrix = substitution_matrices.load(matrix)
-
-    # Gap penalties tuned for variant calling: a single mismatch (score -4
-    # in NUC.4.4) must always be preferred over opening a gap pair.
-    # Open=-10 means the aligner only introduces gaps for genuine indels.
     aligner.open_gap_score = -10.0
     aligner.extend_gap_score = -0.5
+    return aligner
 
-    alignments = aligner.align(reference.seq, sample.seq)
-    best = alignments[0]
 
-    # Reconstruct gap-aligned strings from alignment coordinates.
-    # coordinates is a 2xN array: row 0 = target (ref) positions,
-    # row 1 = query (sample) positions. Gaps appear where one row
-    # stays constant while the other advances.
+def _align_to_reference(
+    reference: SeqRecord,
+    sample: SeqRecord,
+    aligner: PairwiseAligner,
+) -> tuple[str, str]:
+    """Align a single sample against the reference.
+
+    Returns equal-length gapped strings built from the alignment coordinates.
+    Biopython's Alignment.target/query attributes return ungapped strings in
+    newer versions, so we reconstruct from coordinates for correctness.
+    """
+    best = aligner.align(reference.seq, sample.seq)[0]
+
     coords = best.coordinates
     ref_str = str(reference.seq)
     sample_str = str(sample.seq)
@@ -58,23 +64,68 @@ def _align_to_reference(
         ref_start, ref_end = coords[0][block_idx], coords[0][block_idx + 1]
         sample_start, sample_end = coords[1][block_idx], coords[1][block_idx + 1]
 
-        ref_segment_len = ref_end - ref_start
-        sample_segment_len = sample_end - sample_start
+        ref_len = ref_end - ref_start
+        sample_len = sample_end - sample_start
 
-        if ref_segment_len > 0 and sample_segment_len > 0:
-            # Aligned block: both advance
+        if ref_len > 0 and sample_len > 0:
             aligned_ref_parts.append(ref_str[ref_start:ref_end])
             aligned_sample_parts.append(sample_str[sample_start:sample_end])
-        elif ref_segment_len == 0 and sample_segment_len > 0:
-            # Insertion in sample: reference has gaps
-            aligned_ref_parts.append("-" * sample_segment_len)
+        elif ref_len == 0 and sample_len > 0:
+            aligned_ref_parts.append("-" * sample_len)
             aligned_sample_parts.append(sample_str[sample_start:sample_end])
-        elif ref_segment_len > 0 and sample_segment_len == 0:
-            # Deletion in sample: sample has gaps
+        elif ref_len > 0 and sample_len == 0:
             aligned_ref_parts.append(ref_str[ref_start:ref_end])
-            aligned_sample_parts.append("-" * ref_segment_len)
+            aligned_sample_parts.append("-" * ref_len)
 
     return "".join(aligned_ref_parts), "".join(aligned_sample_parts)
+
+
+def _handle_insertion(
+    aligned_ref: str,
+    aligned_sample: str,
+    i: int,
+    ref_pos: int,
+    sample_id: str,
+) -> tuple[Variant, int]:
+    """Collect consecutive insertion bases and return the variant with updated index."""
+    ins_bases: list[str] = []
+    length = len(aligned_ref)
+    while i < length and aligned_ref[i] == "-":
+        ins_bases.append(aligned_sample[i])
+        i += 1
+    variant = Variant(
+        position=max(ref_pos, 1),
+        ref_base="-",
+        sample_base="".join(ins_bases),
+        variant_type=VariantType.INSERTION,
+        sample_id=sample_id,
+    )
+    return variant, i
+
+
+def _handle_deletion(
+    aligned_ref: str,
+    aligned_sample: str,
+    i: int,
+    ref_pos: int,
+    sample_id: str,
+) -> tuple[Variant, int, int]:
+    """Collect consecutive deletion bases and return the variant with updated index and ref_pos."""
+    del_bases: list[str] = []
+    length = len(aligned_ref)
+    start_pos = ref_pos + 1
+    while i < length and aligned_sample[i] == "-" and aligned_ref[i] != "-":
+        del_bases.append(aligned_ref[i])
+        i += 1
+        ref_pos += 1
+    variant = Variant(
+        position=start_pos,
+        ref_base="".join(del_bases),
+        sample_base="-",
+        variant_type=VariantType.DELETION,
+        sample_id=sample_id,
+    )
+    return variant, i, ref_pos
 
 
 def _extract_variants(
@@ -82,17 +133,13 @@ def _extract_variants(
     aligned_sample: str,
     sample_id: str,
 ) -> list[Variant]:
-    """Walk aligned strings position-by-position to identify variants.
+    """Walk aligned strings to identify variants.
 
-    Uses 1-based positioning relative to the reference (gaps in reference
-    don't advance the reference position counter).
-
-    Groups consecutive gaps into single insertion/deletion events rather
-    than reporting each gap character independently.
+    Uses 1-based positioning relative to the reference. Groups consecutive
+    gaps into single insertion/deletion events.
     """
     variants: list[Variant] = []
-    ref_pos = 0  # 1-based position in the ungapped reference
-
+    ref_pos = 0
     i = 0
     length = len(aligned_ref)
 
@@ -101,59 +148,42 @@ def _extract_variants(
         sample_char = aligned_sample[i]
 
         if ref_char == "-":
-            # Insertion in sample: reference has a gap
-            # Collect consecutive insertion bases
-            ins_bases: list[str] = []
-            while i < length and aligned_ref[i] == "-":
-                ins_bases.append(aligned_sample[i])
-                i += 1
-            # Position is the last reference base before the insertion
-            variants.append(
-                Variant(
-                    position=max(ref_pos, 1),
-                    ref_base="-",
-                    sample_base="".join(ins_bases),
-                    variant_type="insertion",
-                    sample_id=sample_id,
-                )
-            )
+            variant, i = _handle_insertion(aligned_ref, aligned_sample, i, ref_pos, sample_id)
+            variants.append(variant)
         elif sample_char == "-":
-            # Deletion in sample: sample has a gap
-            # Collect consecutive deletion bases
-            del_bases: list[str] = []
-            while i < length and aligned_sample[i] == "-" and aligned_ref[i] != "-":
-                del_bases.append(aligned_ref[i])
-                i += 1
-                ref_pos += 1
-            # Position is where the deletion starts
-            variants.append(
-                Variant(
-                    position=ref_pos - len(del_bases) + 1,
-                    ref_base="".join(del_bases),
-                    sample_base="-",
-                    variant_type="deletion",
-                    sample_id=sample_id,
-                )
+            variant, i, ref_pos = _handle_deletion(
+                aligned_ref, aligned_sample, i, ref_pos, sample_id
             )
+            variants.append(variant)
         elif ref_char != sample_char:
-            # SNP: both have a base but they differ
             ref_pos += 1
             variants.append(
                 Variant(
                     position=ref_pos,
                     ref_base=ref_char,
                     sample_base=sample_char,
-                    variant_type="SNP",
+                    variant_type=VariantType.SNP,
                     sample_id=sample_id,
                 )
             )
             i += 1
         else:
-            # Match: no variant
             ref_pos += 1
             i += 1
 
     return variants
+
+
+def _call_variants_for_sample(
+    reference: SeqRecord,
+    sample: SeqRecord,
+    aligner: PairwiseAligner,
+) -> list[Variant]:
+    """Align and extract variants for a single sample."""
+    if len(sample.seq) == 0:
+        return []
+    aligned_ref, aligned_sample = _align_to_reference(reference, sample, aligner)
+    return _extract_variants(aligned_ref, aligned_sample, sample.id or "unnamed")
 
 
 def call_variants(
@@ -183,21 +213,17 @@ def call_variants(
     if len(reference.seq) == 0:
         raise ValueError("Reference sequence cannot be empty.")
 
+    aligner = _build_aligner(matrix)
     all_variants: list[Variant] = []
 
     for sample in samples:
-        if len(sample.seq) == 0:
-            continue
-
-        aligned_ref, aligned_sample = _align_to_reference(reference, sample, matrix)
-        sample_variants = _extract_variants(aligned_ref, aligned_sample, sample.id or "unnamed")
-        all_variants.extend(sample_variants)
+        all_variants.extend(_call_variants_for_sample(reference, sample, aligner))
 
     type_counts = Counter(v.variant_type for v in all_variants)
     summary = {
-        "SNP": type_counts.get("SNP", 0),
-        "insertion": type_counts.get("insertion", 0),
-        "deletion": type_counts.get("deletion", 0),
+        "SNP": type_counts.get(VariantType.SNP, 0),
+        "insertion": type_counts.get(VariantType.INSERTION, 0),
+        "deletion": type_counts.get(VariantType.DELETION, 0),
         "total": len(all_variants),
     }
 

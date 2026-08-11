@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
     from Bio.Align import MultipleSeqAlignment
@@ -60,7 +60,7 @@ class Variant:
     position: int
     ref_base: str
     sample_base: str
-    variant_type: str  # "SNP", "insertion", "deletion"
+    variant_type: Literal["SNP", "insertion", "deletion"]
     sample_id: str
 
 
