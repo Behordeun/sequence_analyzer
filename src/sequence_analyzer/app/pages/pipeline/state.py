@@ -28,6 +28,7 @@ STAGES = ["Ingest", "QC", "Analyze", "Align", "Tree", "Report"]
 class PipelineConfig:
     """User-configurable parameters applied across all pipeline stages."""
 
+    organism_mode: str = "general"
     seq_type: str = "auto"
     alignment_method: str = "msa"
     tree_method: str = "nj"
@@ -37,6 +38,7 @@ class PipelineConfig:
     qc_ambiguity_threshold: float = 5.0
     qc_min_length: int = 10
     qc_max_gap_fraction: float = 50.0
+    contamination_profile: str = "general"
 
 
 @dataclass
@@ -117,3 +119,29 @@ def reset_config() -> None:
     """Reset just the configuration to default values."""
     state = get_pipeline_state()
     state.config = PipelineConfig()
+
+
+def apply_organism_mode(slug: str) -> None:
+    """Apply an organism mode's settings to the current pipeline config.
+
+    Loads the organism profile and overwrites the relevant PipelineConfig
+    fields. Does not touch alignment or tree settings.
+
+    Args:
+        slug: Organism mode identifier (e.g., 'escherichia_coli').
+    """
+    from sequence_analyzer.core.organisms import get_organism_mode
+
+    mode = get_organism_mode(slug)
+    state = get_pipeline_state()
+    config = state.config
+
+    config.organism_mode = slug
+    config.seq_type = mode.seq_type
+    config.qc_ambiguity_threshold = mode.qc_ambiguity_threshold
+    config.qc_min_length = mode.qc_min_length
+    config.qc_max_gap_fraction = mode.qc_max_gap_fraction
+    config.contamination_profile = mode.contamination_profile
+
+    if mode.motif_patterns:
+        config.motif_pattern = mode.motif_patterns[0]

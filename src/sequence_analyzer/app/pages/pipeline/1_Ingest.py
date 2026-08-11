@@ -11,9 +11,14 @@ from sequence_analyzer.app.pages.pipeline.navigation import (
     render_progress_bar,
     render_stage_nav,
 )
-from sequence_analyzer.app.pages.pipeline.state import get_pipeline_state, mark_complete
+from sequence_analyzer.app.pages.pipeline.state import (
+    apply_organism_mode,
+    get_pipeline_state,
+    mark_complete,
+)
 from sequence_analyzer.app.styles import apply_styles
 from sequence_analyzer.core.genbank import fetch_sequence
+from sequence_analyzer.core.organisms import load_organism_modes
 from sequence_analyzer.io.parsers import parse_sequence_file
 
 st.set_page_config(layout="wide", page_title="Pipeline: Ingest")
@@ -29,6 +34,39 @@ st.title("📥 Stage 1: Ingest Sequences")
 
 
 render_help_panel("Ingest")
+
+# --- Organism Mode ---
+st.subheader("Organism Mode")
+
+modes = load_organism_modes()
+mode_slugs = sorted(modes.keys())
+mode_display = {slug: modes[slug].display_name for slug in mode_slugs}
+
+current_mode = state.config.organism_mode
+current_index = mode_slugs.index(current_mode) if current_mode in mode_slugs else 0
+
+selected_mode = st.selectbox(
+    "Select organism",
+    options=mode_slugs,
+    index=current_index,
+    format_func=lambda slug: mode_display[slug],
+    help="Pre-configures QC thresholds, contamination screening, and motif patterns for the selected organism.",
+)
+
+if selected_mode != state.config.organism_mode:
+    apply_organism_mode(selected_mode)
+    st.rerun()
+
+# Show active mode details
+active_mode = modes[state.config.organism_mode]
+if active_mode.description:
+    st.caption(active_mode.description)
+if active_mode.reference_accession:
+    st.caption(
+        f"Suggested reference: {active_mode.reference_accession} ({active_mode.reference_description})"
+    )
+
+st.markdown("---")
 
 # --- Input method ---
 input_method = st.radio(
