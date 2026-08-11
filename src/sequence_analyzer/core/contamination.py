@@ -8,8 +8,10 @@ cross-species contamination before downstream analysis.
 
 from __future__ import annotations
 
+import functools
 import json
 import logging
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +21,8 @@ from Bio.SeqRecord import SeqRecord
 
 logger = logging.getLogger(__name__)
 
+# Path traversal: contamination.py lives at src/sequence_analyzer/core/
+# parents[0]=core, [1]=sequence_analyzer, [2]=src, [3]=project_root
 _PROFILES_PATH = Path(__file__).resolve().parents[3] / "data" / "organism_profiles.json"
 
 _DINUCLEOTIDES = [
@@ -41,8 +45,52 @@ _DINUCLEOTIDES = [
 ]
 
 
+@dataclass(frozen=True)
+class RiskThresholds:
+    """Configurable thresholds for contamination risk classification.
+
+    Attributes:
+        gc_norm_medium: GC deviation (normalized to range width) above which
+            the sequence gets a medium GC score. Below this is low.
+        gc_norm_high: GC deviation (normalized) above which the sequence
+            gets a high GC score.
+        dinuc_low_max: Dinucleotide distance below this is considered normal.
+            Calibrated against random 200bp fragments from matching genomes.
+        dinuc_medium_max: Dinucleotide distance below this is slightly atypical.
+            Above this strongly indicates a different source organism.
+    """
+
+    gc_norm_medium: float = 0.5
+    gc_norm_high: float = 0.5
+    dinuc_low_max: float = 0.12
+    dinuc_medium_max: float = 0.18
+
+
+DEFAULT_THRESHOLDS = RiskThresholds()
+
+
+@functools.lru_cache(maxsize=4)
+def _load_profiles_cached(path_str: str) -> dict[str, Any]:
+    """Cache-backed loader keyed by path string (hashable for lru_cache)."""
+    target = Path(path_str)
+
+    if not target.exists():
+        raise FileNotFoundError(f"Organism profiles not found at {target}")
+
+    try:
+        with open(target, encoding="utf-8") as f:
+            data = json.load(f)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Organism profiles file is not valid JSON: {exc}") from exc
+
+    if "organisms" not in data:
+        raise ValueError("Organism profiles file missing 'organisms' key.")
+
+    return data["organisms"]
+
+
 def load_organism_profiles(path: Path | None = None) -> dict[str, Any]:
-    """Load organism profiles from disk.
+    """Load organism profiles from disk (cached after first read).
 
     Args:
         path: Override path for testing. Defaults to bundled organism_profiles.json.
@@ -55,17 +103,7 @@ def load_organism_profiles(path: Path | None = None) -> dict[str, Any]:
         ValueError: If the file is malformed or missing the 'organisms' key.
     """
     target = path or _PROFILES_PATH
-
-    if not target.exists():
-        raise FileNotFoundError(f"Organism profiles not found at {target}")
-
-    with open(target, encoding="utf-8") as f:
-        data = json.load(f)
-
-    if "organisms" not in data:
-        raise ValueError("Organism profiles file missing 'organisms' key.")
-
-    return data["organisms"]
+    return _load_profiles_cached(str(target))
 
 
 def list_available_organisms(path: Path | None = None) -> list[str]:
@@ -141,6 +179,7 @@ def _classify_risk(
     gc_deviation: float,
     dinuc_distance: float,
     gc_range_width: float,
+    thresholds: RiskThresholds = DEFAULT_THRESHOLDS,
 ) -> tuple[str, str]:
     """Classify contamination risk based on GC deviation and dinucleotide distance.
 
@@ -148,17 +187,12 @@ def _classify_risk(
     - GC deviation as a fraction of the expected range width
     - Dinucleotide distance against empirically-calibrated thresholds
 
-    Dinucleotide thresholds are calibrated against real genomic data: random
-    200bp fragments from a matching genome typically produce distances of
-    0.05-0.10 against the expected profile due to stochastic variation and
-    short repeat patterns. Genuine cross-species contamination pushes the
-    distance above 0.15.
-
     Args:
         gc_deviation: How far the observed GC is from the nearest edge of the expected range.
             Zero means within range.
         dinuc_distance: Euclidean distance between observed and expected dinucleotide vectors.
         gc_range_width: Width of the expected GC range (max - min).
+        thresholds: Configurable threshold values for risk classification.
 
     Returns:
         Tuple of (risk_level, reasoning) where risk_level is one of:
@@ -169,25 +203,22 @@ def _classify_risk(
     gc_score = 0
     dinuc_score = 0
 
-    # GC scoring: deviation normalized against the organism's expected range width
-    gc_norm = gc_deviation / max(gc_range_width, 1.0)
+    # Guard against zero-width ranges (would make normalization meaningless)
+    effective_width = max(gc_range_width, 1.0)
+    gc_norm = gc_deviation / effective_width
 
     if gc_deviation == 0.0:
         gc_score = 0
-    elif gc_norm < 0.5:
+    elif gc_norm < thresholds.gc_norm_medium:
         gc_score = 1
         reasons.append(f"GC {gc_deviation:.1f}% outside expected range")
     else:
         gc_score = 2
         reasons.append(f"GC {gc_deviation:.1f}% far outside expected range")
 
-    # Dinucleotide scoring: thresholds calibrated against real genomic fragments.
-    # Distances below 0.12 are typical for matching organisms (short sequences
-    # and repeat patterns inflate this metric). Above 0.18 strongly indicates
-    # a different source organism.
-    if dinuc_distance < 0.12:
+    if dinuc_distance < thresholds.dinuc_low_max:
         dinuc_score = 0
-    elif dinuc_distance < 0.18:
+    elif dinuc_distance < thresholds.dinuc_medium_max:
         dinuc_score = 1
         reasons.append(f"Dinucleotide profile slightly atypical (dist={dinuc_distance:.3f})")
     else:
@@ -208,6 +239,7 @@ def detect_contamination(
     sequences: list[SeqRecord],
     organism: str = "general",
     profiles_path: Path | None = None,
+    thresholds: RiskThresholds | None = None,
 ) -> pd.DataFrame:
     """Screen sequences for potential contamination based on composition profiling.
 
@@ -220,6 +252,7 @@ def detect_contamination(
         organism: Organism profile key (e.g., 'escherichia_coli', 'sars_cov_2').
             Defaults to 'general' which uses permissive thresholds.
         profiles_path: Override path to profiles JSON for testing.
+        thresholds: Optional RiskThresholds to override default classification bands.
 
     Returns:
         DataFrame with columns:
@@ -237,6 +270,7 @@ def detect_contamination(
     if not sequences:
         raise ValueError("At least one sequence is required for contamination detection.")
 
+    risk_thresholds = thresholds or DEFAULT_THRESHOLDS
     profiles = load_organism_profiles(profiles_path)
 
     if organism not in profiles:
@@ -266,7 +300,9 @@ def detect_contamination(
         else:
             gc_deviation = 0.0
 
-        risk_level, reason = _classify_risk(gc_deviation, dinuc_distance, gc_range_width)
+        risk_level, reason = _classify_risk(
+            gc_deviation, dinuc_distance, gc_range_width, risk_thresholds
+        )
 
         rows.append(
             {

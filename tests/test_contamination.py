@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 
+import numpy as np
 import pytest
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
@@ -382,3 +383,15 @@ class TestDetectContamination:
         records = [SeqRecord(Seq("ATGCATGCATGC"), id="my_sequence_42")]
         df = detect_contamination(records, organism="test_org", profiles_path=tmp_profiles)
         assert df.iloc[0]["ID"] == "my_sequence_42"
+
+    def test_all_ambiguous_and_gaps_does_not_crash(self, tmp_profiles: Path):
+        # Sequence with only ambiguous/gap characters should produce valid output
+        seq = SeqRecord(Seq("NNNN---NNN--"), id="ambiguous_only")
+        df = detect_contamination([seq], organism="test_org", profiles_path=tmp_profiles)
+        row = df.iloc[0]
+        assert row["GC_Observed"] == pytest.approx(0.0)
+        assert row["Dinuc_Distance"] >= 0.0
+        assert np.isfinite(row["Dinuc_Distance"])
+        assert row["Contamination_Risk"] in ("Low", "Medium", "High")
+        assert isinstance(row["Risk_Reason"], str)
+        assert row["Risk_Reason"].strip() != ""
