@@ -1,0 +1,12 @@
+{
+  "display_name": "Staphylococcus aureus",
+  "description": "S. aureus NCTC 8325 profile. Low-GC gram-positive (~32.9%). Includes drug resistance motifs.",
+  "seq_type": "DNA",
+  "qc_ambiguity_threshold": 3.0,
+  "qc_min_length": 100,
+  "qc_max_gap_fraction": 30.0,
+  "contamination_profile": "staphylococcus_aureus",
+  "motif_patterns": ["ATG", "AGGAGG", "TGATAATG"],
+  "reference_accession": "NC_007795",
+  "reference_description": "S. aureus NCTC 8325 complete genome"
+}
