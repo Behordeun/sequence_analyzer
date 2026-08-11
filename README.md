@@ -51,6 +51,24 @@ df = analyze_sequences(valid, is_rna=False)
 print(df)
 ```
 
+```python
+# Contamination screening
+from sequence_analyzer.core.contamination import detect_contamination
+
+results = detect_contamination(valid, organism="escherichia_coli")
+print(results[["ID", "Contamination_Risk", "Risk_Reason"]])
+```
+
+```python
+# Variant calling against a reference
+from sequence_analyzer.core.variants import call_variants, summarize_variants
+
+reference = valid[0]
+samples = valid[1:]
+result = call_variants(reference, samples)
+print(summarize_variants(result))
+```
+
 ### Web application
 
 ```bash
@@ -85,10 +103,13 @@ src/sequence_analyzer/
 ├── core/               # Pure computation (no UI dependencies)
 │   ├── alignment.py    # Pairwise + MSA
 │   ├── analysis.py     # GC content, skew, composition
+│   ├── contamination.py # Cross-species contamination detection
 │   ├── genbank.py      # NCBI Entrez fetching
 │   ├── motifs.py       # Regex motif scanning
 │   ├── phylogenetics.py # Tree construction + bootstrapping
-│   └── validation.py   # Sequence cleaning + type detection
+│   ├── qc.py          # Quality control assessment
+│   ├── validation.py   # Sequence cleaning + type detection
+│   └── variants.py    # Reference-based variant calling
 ├── models/             # Typed dataclasses for results
 ├── io/                 # File parsing (FASTA, PHYLIP, NEXUS)
 └── app/                # Streamlit web interface

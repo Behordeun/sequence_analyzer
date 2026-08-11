@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
     from Bio.Align import MultipleSeqAlignment
@@ -51,3 +51,23 @@ class MotifHit:
     pattern: str
     hit_count: int
     positions: list[int] = field(default_factory=list)
+
+
+@dataclass
+class Variant:
+    """A single variant detected between a sample and a reference sequence."""
+
+    position: int
+    ref_base: str
+    sample_base: str
+    variant_type: Literal["SNP", "insertion", "deletion"]
+    sample_id: str
+
+
+@dataclass
+class VariantResult:
+    """Result container for reference-based variant calling."""
+
+    reference_id: str
+    variants: list[Variant] = field(default_factory=list)
+    summary: dict[str, int] = field(default_factory=dict)
