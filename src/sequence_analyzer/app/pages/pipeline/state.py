@@ -145,3 +145,5 @@ def apply_organism_mode(slug: str) -> None:
 
     if mode.motif_patterns:
         config.motif_pattern = mode.motif_patterns[0]
+    else:
+        config.motif_pattern = ""

@@ -40,31 +40,39 @@ st.subheader("Organism Mode")
 
 modes = load_organism_modes()
 mode_slugs = sorted(modes.keys())
-mode_display = {slug: modes[slug].display_name for slug in mode_slugs}
 
-current_mode = state.config.organism_mode
-current_index = mode_slugs.index(current_mode) if current_mode in mode_slugs else 0
+if not mode_slugs:
+    st.warning("No organism profiles found. Using default settings.")
+else:
+    mode_display = {slug: modes[slug].display_name for slug in mode_slugs}
 
-selected_mode = st.selectbox(
-    "Select organism",
-    options=mode_slugs,
-    index=current_index,
-    format_func=lambda slug: mode_display[slug],
-    help="Pre-configures QC thresholds, contamination screening, and motif patterns for the selected organism.",
-)
+    current_mode = state.config.organism_mode
+    if current_mode not in mode_slugs:
+        current_mode = "general" if "general" in mode_slugs else mode_slugs[0]
+        apply_organism_mode(current_mode)
 
-if selected_mode != state.config.organism_mode:
-    apply_organism_mode(selected_mode)
-    st.rerun()
+    current_index = mode_slugs.index(current_mode)
 
-# Show active mode details
-active_mode = modes[state.config.organism_mode]
-if active_mode.description:
-    st.caption(active_mode.description)
-if active_mode.reference_accession:
-    st.caption(
-        f"Suggested reference: {active_mode.reference_accession} ({active_mode.reference_description})"
+    selected_mode = st.selectbox(
+        "Select organism",
+        options=mode_slugs,
+        index=current_index,
+        format_func=lambda slug: mode_display[slug],
+        help="Pre-configures QC thresholds, contamination screening, and motif patterns for the selected organism.",
     )
+
+    if selected_mode != state.config.organism_mode:
+        apply_organism_mode(selected_mode)
+        st.rerun()
+
+    # Show active mode details
+    active_mode = modes.get(state.config.organism_mode)
+    if active_mode and active_mode.description:
+        st.caption(active_mode.description)
+    if active_mode and active_mode.reference_accession:
+        st.caption(
+            f"Suggested reference: {active_mode.reference_accession} ({active_mode.reference_description})"
+        )
 
 st.markdown("---")
 

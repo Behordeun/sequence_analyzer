@@ -9,9 +9,12 @@ from __future__ import annotations
 
 import functools
 import json
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 _ORGANISMS_DIR = Path(__file__).resolve().parents[3] / "data" / "organisms"
 
@@ -20,8 +23,8 @@ _ORGANISMS_DIR = Path(__file__).resolve().parents[3] / "data" / "organisms"
 class OrganismMode:
     """Pre-configured analysis parameters for a specific organism.
 
-    Each field maps directly to a PipelineConfig setting. Fields set to
-    None mean "keep the default" — only explicitly set values override.
+    Each field maps directly to a PipelineConfig setting. Profiles override
+    values they specify; unspecified fields use the dataclass defaults.
     """
 
     slug: str
@@ -64,10 +67,10 @@ def _parse_organism_mode(slug: str, data: dict[str, Any]) -> OrganismMode:
     )
 
 
-@functools.lru_cache(maxsize=1)
-def _load_all_modes(organisms_dir: str) -> dict[str, OrganismMode]:
-    """Load all organism mode JSON files from the given directory (cached)."""
-    directory = Path(organisms_dir)
+@functools.lru_cache(maxsize=4)
+def _load_modes_cached(resolved_dir: str) -> dict[str, OrganismMode]:
+    """Cache-backed loader keyed by resolved path string."""
+    directory = Path(resolved_dir)
     modes: dict[str, OrganismMode] = {}
 
     if not directory.exists():
@@ -80,12 +83,7 @@ def _load_all_modes(organisms_dir: str) -> dict[str, OrganismMode]:
             slug = path.stem
             modes[slug] = _parse_organism_mode(slug, data)
         except (json.JSONDecodeError, KeyError) as exc:
-            # Skip malformed profiles rather than crashing the whole system
-            import logging
-
-            logging.getLogger(__name__).warning(
-                "Skipping malformed organism profile %s: %s", path.name, exc
-            )
+            logger.warning("Skipping malformed organism profile %s: %s", path.name, exc)
 
     return modes
 
@@ -99,8 +97,8 @@ def load_organism_modes(organisms_dir: Path | None = None) -> dict[str, Organism
     Returns:
         Dictionary mapping organism slug to OrganismMode.
     """
-    target = organisms_dir or _ORGANISMS_DIR
-    return _load_all_modes(str(target))
+    target = (organisms_dir or _ORGANISMS_DIR).resolve()
+    return _load_modes_cached(str(target))
 
 
 def list_organism_modes(organisms_dir: Path | None = None) -> list[str]:

@@ -56,6 +56,12 @@ def tmp_organisms_dir(tmp_path: Path) -> Path:
     return org_dir
 
 
+@pytest.fixture
+def loaded_tmp_modes(tmp_organisms_dir: Path) -> dict:
+    """Pre-loaded modes from the temporary organisms directory."""
+    return load_organism_modes(tmp_organisms_dir)
+
+
 class TestLoadOrganismModes:
     def test_loads_bundled_profiles(self, bundled_organisms_dir: Path):
         modes = load_organism_modes(bundled_organisms_dir)
@@ -64,15 +70,19 @@ class TestLoadOrganismModes:
         assert "sars_cov_2" in modes
         assert "plasmodium_falciparum" in modes
 
-    def test_loads_custom_directory(self, tmp_organisms_dir: Path):
-        modes = load_organism_modes(tmp_organisms_dir)
+    def test_loads_default_path_without_arguments(self):
+        modes = load_organism_modes()
         assert "general" in modes
-        assert "strict_org" in modes
-        assert len(modes) == 2
+        assert "escherichia_coli" in modes
+        assert len(modes) >= 7
 
-    def test_returns_organism_mode_instances(self, tmp_organisms_dir: Path):
-        modes = load_organism_modes(tmp_organisms_dir)
-        for mode in modes.values():
+    def test_loads_custom_directory(self, loaded_tmp_modes: dict):
+        assert "general" in loaded_tmp_modes
+        assert "strict_org" in loaded_tmp_modes
+        assert len(loaded_tmp_modes) == 2
+
+    def test_returns_mode_instances(self, loaded_tmp_modes: dict):
+        for mode in loaded_tmp_modes.values():
             assert isinstance(mode, OrganismMode)
 
     def test_empty_directory_returns_empty_dict(self, tmp_path: Path):
