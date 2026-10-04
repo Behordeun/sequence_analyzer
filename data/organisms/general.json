@@ -1,0 +1,12 @@
+{
+  "display_name": "General (no organism specified)",
+  "description": "Permissive defaults suitable for any organism. Use when the source organism is unknown or mixed.",
+  "seq_type": "auto",
+  "qc_ambiguity_threshold": 5.0,
+  "qc_min_length": 10,
+  "qc_max_gap_fraction": 50.0,
+  "contamination_profile": "general",
+  "motif_patterns": ["ATG", "TAA|TAG|TGA"],
+  "reference_accession": "",
+  "reference_description": ""
+}

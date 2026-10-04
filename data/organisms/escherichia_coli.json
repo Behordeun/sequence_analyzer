@@ -1,0 +1,12 @@
+{
+  "display_name": "Escherichia coli",
+  "description": "E. coli K-12 reference profile. GC ~50.8%, well-characterized genome with extensive annotation.",
+  "seq_type": "DNA",
+  "qc_ambiguity_threshold": 3.0,
+  "qc_min_length": 100,
+  "qc_max_gap_fraction": 30.0,
+  "contamination_profile": "escherichia_coli",
+  "motif_patterns": ["ATG", "TATAAT", "TTGACA", "AGGAGG"],
+  "reference_accession": "U00096",
+  "reference_description": "E. coli K-12 MG1655 complete genome"
+}
